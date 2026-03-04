@@ -29,7 +29,7 @@ class _MainPageState extends State<MainPage> {
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: Image.asset(
-              '../../brain_logo_goodremake.png',
+              'assets/brain_logo_goodremake.png',
               height: 30,
             ),
           ),
@@ -56,6 +56,11 @@ class _MainPageState extends State<MainPage> {
                   ),
                 ),
               ),
+            ),
+            ListTile(
+              leading:const Icon(Icons.person),
+              title:const Text('Profile'),
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.settings),
