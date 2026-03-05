@@ -3,6 +3,6 @@ This app is used to help athletes that participate in team sports to train their
 ## How it's made
 **Programming language: Dart**\
 **Framework: Flutter**\
-**Database: Not Determined Yet**
+**Database: Firebase**
 ## Usage instructions
 Not Determined Yet
