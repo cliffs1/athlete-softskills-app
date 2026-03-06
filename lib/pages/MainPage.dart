@@ -29,10 +29,10 @@ class _MainPageState extends State<MainPage> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12.0),
+            padding: const EdgeInsets.only(right: 0.0),
             child: Image.asset(
               '../../android/assets/brain_logo_goodremake.png',
-              height: 30,
+              height: 60,
             ),
           ),
         ],
