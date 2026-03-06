@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'ProfilePage.dart';
+import '../widgets/TipsWidget.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -58,9 +60,16 @@ class _MainPageState extends State<MainPage> {
               ),
             ),
             ListTile(
-              leading:const Icon(Icons.person),
-              title:const Text('Profile'),
-              onTap: () {},
+              leading: const Icon(Icons.person),
+              title: const Text('Profile'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfilePage(),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.settings),
@@ -79,6 +88,8 @@ class _MainPageState extends State<MainPage> {
               '$_counter',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
+            const SizedBox(height:30),
+            TipsWidget(),
           ],
         ),
       ),
