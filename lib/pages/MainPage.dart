@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:softskills_app/widgets/CalendarWidget.dart';
+import 'package:softskills_app/widgets/StatisticsWidget.dart';
 import 'ProfilePage.dart';
 import '../widgets/TipsWidget.dart';
 
@@ -90,6 +92,8 @@ class _MainPageState extends State<MainPage> {
             ),
             const SizedBox(height:30),
             TipsWidget(),
+            Calendarwidget(),
+            Statisticswidget(),
           ],
         ),
       ),
