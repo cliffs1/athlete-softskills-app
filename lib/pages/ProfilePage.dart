@@ -14,6 +14,9 @@ class _ProfilePageState extends State<ProfilePage> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
+  String username = "Algirdas";
+  String email = "Algis123@email.com";
+
   Future<void> _pickImage() async {
     final XFile? pickedImage =
         await _picker.pickImage(source: ImageSource.gallery);
@@ -52,7 +55,44 @@ class _ProfilePageState extends State<ProfilePage> {
               onPressed: _pickImage,
               child: const Text("Upload photo"),
             ),
+            const SizedBox(height: 20),
 
+            const SizedBox(height: 20),
+
+           const SizedBox(height: 20),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                "Username: $username",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0B1220),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                "Email: $email",
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF4F617F),
+                ),
+              ),
+            ),
           ],
         ),
       ),
