@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:softskills_app/pages/LoginPage.dart';
 import 'package:softskills_app/widgets/CalendarWidget.dart';
 import 'package:softskills_app/widgets/StatisticsWidget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -102,6 +103,18 @@ class _MainPageState extends State<MainPage> {
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
               onTap: () {},
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Atsijungti'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LoginPage(),
+                  ),
+                );
+              },
             ),
           ],
         ),
