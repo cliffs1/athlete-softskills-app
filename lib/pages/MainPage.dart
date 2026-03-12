@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:softskills_app/widgets/CalendarWidget.dart';
 import 'package:softskills_app/widgets/StatisticsWidget.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ProfilePage.dart';
 import '../widgets/TipsWidget.dart';
 
@@ -11,13 +12,37 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  final supabase = Supabase.instance.client;
   int _counter = 0;
+
+  @override
+  void initState() {
+  super.initState();
+  //testDatabase();
+  }
+
+ // a method for testing the database connection
+ Future<void> testDatabase() async {
+  try {
+    debugPrint('testDatabase started');
+
+    final data = await supabase.from('sporto_saka').select();
+
+    debugPrint('Query finished');
+    debugPrint('Rows count: ${data.length}');
+    debugPrint('Data: $data');
+  } catch (e) {
+    debugPrint('Database error: $e');
+  }
+}
 
   void _incrementCounter() {
     setState(() {
       _counter++;
     });
   }
+
+  
 
   @override
   Widget build(BuildContext context) {
