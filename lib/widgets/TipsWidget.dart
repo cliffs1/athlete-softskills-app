@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:softskills_app/pages/TipsPage.dart';
 
 class TipsWidget extends StatelessWidget {
   const TipsWidget({super.key});
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
-      onPressed: () {},
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TipsPage(),
+          ),
+        );
+      },
       icon: const Icon(Icons.lightbulb),
       label: const Text("Patarimai"),
     );
