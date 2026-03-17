@@ -75,8 +75,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
             const SizedBox(height: 15),
 
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color.fromRGBO(56, 189, 248, 1)
+              ),
               onPressed: _pickImage,
-              child: const Text("Keisti nuotrauką"),
+              child: const Text("Keisti nuotrauką",
+                  style: TextStyle(
+                      fontSize: 18,
+                      color: Color.fromRGBO(255, 255, 255, 1))
+              ),
             ),
 
             const SizedBox(height: 20),
@@ -92,13 +99,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
             const SizedBox(height: 20),
 
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color.fromRGBO(56, 189, 248, 1)
+              ),
               onPressed: () {
                 Navigator.pop(context, {
                   "username": _usernameController.text,
                   "image": _image
                 });
               },
-              child: const Text("Išsaugoti"),
+              child: const Text("Išsaugoti",
+                  style: TextStyle(
+                      fontSize: 18,
+                      color: Color.fromRGBO(255, 255, 255, 1))
+              ),
             )
           ],
         ),

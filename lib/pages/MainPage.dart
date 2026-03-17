@@ -121,14 +121,15 @@ class _MainPageState extends State<MainPage> {
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
+            const SizedBox(height:10),
             TipsWidget(),
-            const SizedBox(height:5),
+            const SizedBox(height:10),
             Calendarwidget(),
-            const SizedBox(height:5),
+            const SizedBox(height:10),
             Statisticswidget(),
-            const SizedBox(height:5),
+            const SizedBox(height:10),
           ],
         ),
       ),

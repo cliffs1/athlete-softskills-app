@@ -37,11 +37,23 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
-
+      backgroundColor: Color.fromRGBO(229, 231, 235, 1),
       appBar: AppBar(
         centerTitle: true,
-        title: const Text("Algora"),
+        backgroundColor: Color.fromRGBO(167, 139, 250, 1),
+        title: const Text(
+          "Algora",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 0.0),
+            child: Image.asset(
+              '../../android/assets/brain_logo_goodremakecolor.png',
+              height: 60,
+            ),
+          ),
+        ],
       ),
 
       body: Center(
@@ -66,44 +78,57 @@ class _RegisterPageState extends State<RegisterPage> {
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
+                      color: Color.fromRGBO(11, 18, 32, 1)
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 25),
 
-                const Text("Naudotojo vardas:"),
+                const Text("Naudotojo vardas:", style: TextStyle(
+                    fontSize: 18, color: Color.fromRGBO(11, 18, 32, 1)
+                  )
+                ),
                 const SizedBox(height: 6),
 
                 TextField(
                   controller: usernameController,
                   decoration: const InputDecoration(
+                    hintText: "Įveskite naudotojo vardą",
                     border: OutlineInputBorder(),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                const Text("El. paštas:"),
+                const Text("El. paštas:", style: TextStyle(
+                    fontSize: 18, color: Color.fromRGBO(11, 18, 32, 1)
+                  )
+                ),
                 const SizedBox(height: 6),
 
                 TextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
+                    hintText: "Įveskite el. paštą",
                     border: OutlineInputBorder(),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                const Text("Slaptažodis:"),
+                const Text("Slaptažodis:", style: TextStyle(
+                    fontSize: 18, color: Color.fromRGBO(11, 18, 32, 1)
+                  )
+                ),
                 const SizedBox(height: 6),
 
                 TextField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: const InputDecoration(
+                    hintText: "Įveskite slaptažodį",
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -114,6 +139,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: ElevatedButton(
                     onPressed: register,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: Color.fromRGBO(56, 189, 248, 1),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 40,
                         vertical: 14,
@@ -124,7 +150,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     child: const Text(
                       "Registruotis",
-                      style: TextStyle(fontSize: 18),
+                      style: TextStyle(
+                          fontSize: 18,
+                          color: Color.fromRGBO(255, 255, 255, 1)),
                     ),
                   ),
                 ),
