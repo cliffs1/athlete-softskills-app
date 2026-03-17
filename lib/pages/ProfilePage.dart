@@ -124,6 +124,9 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 10),
 
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color.fromRGBO(56, 189, 248, 1)
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -134,16 +137,27 @@ class _ProfilePageState extends State<ProfilePage> {
                   )
                 );
               },
-              child: const Text("Keisti slaptažodį"),
+              child: const Text("Keisti slaptažodį",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Color.fromRGBO(255, 255, 255, 1))
+              ),
             ),
 
             const SizedBox(height: 10),
 
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color.fromRGBO(56, 189, 248, 1)
+              ),
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text("Ištrinti paskyrą"),
+              child: const Text("Ištrinti paskyrą",
+                  style: TextStyle(
+                      fontSize: 18,
+                      color: Color.fromRGBO(255, 255, 255, 1))
+              ),
             )
           ],
         ),

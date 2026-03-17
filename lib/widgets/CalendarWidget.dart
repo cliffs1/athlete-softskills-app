@@ -6,7 +6,10 @@ class Calendarwidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton.icon(
+    return SizedBox(
+      width: double.infinity,
+    height: 60,
+    child: ElevatedButton.icon(
        onPressed: () {
         Navigator.push(
           context,
@@ -17,6 +20,7 @@ class Calendarwidget extends StatelessWidget {
       },
       icon: const Icon(Icons.calendar_today),
       label: const Text("Kalendorius"),
+    ),
     );
   }
 }

@@ -84,12 +84,19 @@ class _EditProfilePagePasswordState  extends State<EditProfilePagePassword> {
             const SizedBox(height: 20),
 
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color.fromRGBO(56, 189, 248, 1)
+              ),
               onPressed: () {
                 Navigator.pop(context, {
                   "password": _passwordController.text,
                 });
               },
-              child: const Text("Išsaugoti"),
+              child: const Text("Išsaugoti",
+                  style: TextStyle(
+                      fontSize: 18,
+                      color: Color.fromRGBO(255, 255, 255, 1))
+              ),
             )
           ],
         ),
