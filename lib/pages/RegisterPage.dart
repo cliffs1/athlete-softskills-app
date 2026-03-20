@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -9,27 +10,67 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
 
+  final supabase = Supabase.instance.client;
+
   final usernameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  void register() {
-    String username = usernameController.text.trim();
-    String email = emailController.text.trim();
-    String password = passwordController.text.trim();
+ Future<void> register() async {
+  String username = usernameController.text.trim();
+  String email = emailController.text.trim();
+  String password = passwordController.text.trim();
 
-    if (username.isEmpty || email.isEmpty || password.isEmpty) {
+  if (username.isEmpty || email.isEmpty || password.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Užpildykite visus laukus")),
+    );
+    return;
+  }
+
+  try {
+    final AuthResponse response = await supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
+
+    final user = response.user;
+
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Užpildykite visus laukus")),
+        const SnackBar(content: Text("Nepavyko sukurti vartotojo")),
       );
       return;
     }
 
+    await supabase.from('naudotojas').insert({
+      'auth_user_id': user.id,
+      'vardas': username,
+      'el_pastas': email,
+      'fk_sporto_saka': null,
+    });
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Registracija sėkminga")),
     );
-  }
 
+    Navigator.pop(context);
+  } on AuthException catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Auth klaida: ${e.message}")),
+    );
+  } on PostgrestException catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("DB klaida: ${e.message}")),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Klaida: $e")),
+    );
+  }
+}
   void goToLogin() {
     Navigator.pop(context);
   }
