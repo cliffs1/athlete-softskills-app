@@ -30,7 +30,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Padding(
             padding: const EdgeInsets.only(right: 0.0),
             child: Image.asset(
-              '../../android/assets/brain_logo_goodremakecolor.png',
+              'assets/brain_logo_goodremakecolor.png',
               height: 60,
             ),
           ),
