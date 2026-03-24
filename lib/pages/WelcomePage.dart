@@ -4,6 +4,7 @@ import 'package:softskills_app/widgets/CalendarWidget.dart';
 import 'package:softskills_app/widgets/StatisticsWidget.dart';
 import 'ProfilePage.dart';
 import '../widgets/TipsWidget.dart';
+import 'TestPage.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -62,7 +63,14 @@ class _WelcomePageState extends State<WelcomePage> {
             ),
             const SizedBox(height:80),
             ElevatedButton(
-              onPressed: () { Navigator.pop(context); },
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TestPage(),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color.fromRGBO(56, 189, 248, 1),
                 padding: const EdgeInsets.symmetric(
