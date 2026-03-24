@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:softskills_app/pages/LoginPage.dart';
 import 'pages/MainPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

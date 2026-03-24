@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'RegisterPage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'MainPage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,6 +11,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final supabase = Supabase.instance.client;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -19,21 +22,46 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void login() {
+  Future<void> login() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Užpildykite visus laukus')),
+        const SnackBar(content: Text("Užpildykite visus laukus")),
       );
       return;
     }
 
-    // logika prisijungimui --------------
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Prisijungimas: $email')),
-    );
+    try {
+      final response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Neteisingi prisijungimo duomenys")),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainPage()),
+      );
+
+    } on AuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Klaida: ${e.message}")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Klaida: $e")),
+      );
+    }
   }
 
 void goToRegister() {
