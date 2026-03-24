@@ -15,7 +15,6 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   final supabase = Supabase.instance.client;
-  int _counter = 0;
 
   @override
   void initState() {
@@ -23,7 +22,6 @@ class _MainPageState extends State<MainPage> {
   //testDatabase();
   }
 
- // a method for testing the database connection
  Future<void> testDatabase() async {
   try {
     debugPrint('testDatabase started');
@@ -38,13 +36,6 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -115,12 +106,15 @@ class _MainPageState extends State<MainPage> {
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Atsijungti'),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                await supabase.auth.signOut();
+
+                if (!mounted) return;
+
+                Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const LoginPage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                      (route) => false,
                 );
               },
             ),
