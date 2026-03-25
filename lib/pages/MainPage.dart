@@ -3,9 +3,11 @@ import 'package:softskills_app/pages/LoginPage.dart';
 import 'package:softskills_app/pages/WelcomePage.dart';
 import 'package:softskills_app/widgets/CalendarWidget.dart';
 import 'package:softskills_app/widgets/StatisticsWidget.dart';
+import 'package:softskills_app/widgets/TestWidget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ProfilePage.dart';
 import '../widgets/TipsWidget.dart';
+import 'SettingsPage.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -98,7 +100,7 @@ class _MainPageState extends State<MainPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const WelcomePage(),
+                    builder: (context) => const SettingsPage(),
                   ),
                 );
               },
@@ -128,10 +130,12 @@ class _MainPageState extends State<MainPage> {
             const SizedBox(height:10),
             TipsWidget(),
             const SizedBox(height:10),
-            Calendarwidget(),
+            CalendarWidget(),
             const SizedBox(height:10),
-            Statisticswidget(),
+            StatisticsWidget(),
             const SizedBox(height:10),
+            TestWidget(),
+            const SizedBox(height:10)
           ],
         ),
       ),

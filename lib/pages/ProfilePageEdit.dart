@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String username;
@@ -20,6 +21,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _usernameController;
   File? _image;
   final ImagePicker _picker = ImagePicker();
+  final supabase = Supabase.instance.client;
 
   @override
   void initState() {
@@ -36,6 +38,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() {
         _image = File(pickedImage.path);
       });
+    }
+  }
+
+  Future<void> updateProfile() async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('naudotojas')
+          .update({
+        'vardas': _usernameController.text,
+      })
+          .eq('auth_user_id', user.id);
+
+      if (!mounted) return;
+
+      Navigator.pop(context, {
+        "vardas": _usernameController.text,
+        "image": _image
+      });
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Klaida: $e")),
+      );
     }
   }
 
@@ -102,12 +131,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               style: ElevatedButton.styleFrom(
                   backgroundColor: Color.fromRGBO(56, 189, 248, 1)
               ),
-              onPressed: () {
-                Navigator.pop(context, {
-                  "username": _usernameController.text,
-                  "image": _image
-                });
-              },
+              onPressed: updateProfile,
               child: const Text("Išsaugoti",
                   style: TextStyle(
                       fontSize: 18,

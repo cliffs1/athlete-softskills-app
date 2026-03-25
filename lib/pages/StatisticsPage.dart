@@ -155,11 +155,11 @@ class _StatisticspageState extends State<Statisticspage> {
     return Row(
       children: [
         Expanded(
-          child: buildStatCard("Pokytis", "+25%"),
+          child: buildStatCard("Pokytis", "+25%"), //<-- hardcoded kol kas
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: buildStatCard("Vidurkis", "6.8"),
+          child: buildStatCard("Vidurkis", "6.8"), //<-- hardcoded kol kas
         ),
       ],
     );

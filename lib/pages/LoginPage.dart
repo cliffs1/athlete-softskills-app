@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'RegisterPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'MainPage.dart';
+import 'WelcomePage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -39,19 +40,37 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
-      if (response.user == null) {
+      final user = response.user;
+
+      if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Neteisingi prisijungimo duomenys")),
         );
         return;
       }
 
+      final data = await supabase
+          .from('naudotojas')
+          .select('hide_welcome')
+          .eq('auth_user_id', user.id)
+          .single();
+
+      final hideWelcome = data['hide_welcome'] ?? true;
+      print(hideWelcome);
+
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainPage()),
-      );
+      if (hideWelcome) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainPage()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const WelcomePage()),
+        );
+      }
 
     } on AuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

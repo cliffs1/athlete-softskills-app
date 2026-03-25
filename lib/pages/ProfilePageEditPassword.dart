@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditProfilePagePassword extends StatefulWidget {
   final String password;
@@ -15,12 +16,59 @@ class EditProfilePagePassword extends StatefulWidget {
 }
 
 class _EditProfilePagePasswordState  extends State<EditProfilePagePassword> {
+  final supabase = Supabase.instance.client;
+  late TextEditingController _newPasswordController;
+  late TextEditingController _repeatPasswordController;
   late TextEditingController _passwordController;
 
   @override
   void initState() {
     super.initState();
-    _passwordController = TextEditingController(text: widget.password);
+    _passwordController = TextEditingController(text: "********");
+    _newPasswordController = TextEditingController();
+    _repeatPasswordController = TextEditingController();
+  }
+
+  Future<void> updatePassword() async {
+    final newPassword = _newPasswordController.text.trim();
+    final repeatPassword = _repeatPasswordController.text.trim();
+
+    if (newPassword.isEmpty || repeatPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Užpildykite visus laukus")),
+      );
+      return;
+    }
+
+    if (newPassword != repeatPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Slaptažodžiai nesutampa")),
+      );
+      return;
+    }
+
+    try {
+      await supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Slaptažodis pakeistas")),
+      );
+
+      Navigator.pop(context);
+
+    } on AuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Klaida: ${e.message}")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Klaida: $e")),
+      );
+    }
   }
 
   @override
@@ -55,7 +103,7 @@ class _EditProfilePagePasswordState  extends State<EditProfilePagePassword> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                "Jūsų slaptažodis: ${_passwordController.text}",
+                "Jūsų Slaptažodis: ********",
                 style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xFF4F617F),
@@ -66,6 +114,8 @@ class _EditProfilePagePasswordState  extends State<EditProfilePagePassword> {
             const SizedBox(height: 20),
 
             TextField(
+              controller: _newPasswordController,
+              obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Naujas slaptažodis",
                 border: OutlineInputBorder(),
@@ -75,6 +125,8 @@ class _EditProfilePagePasswordState  extends State<EditProfilePagePassword> {
             const SizedBox(height: 20),
 
             TextField(
+              controller: _repeatPasswordController,
+              obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Pakartoti naują slaptažodį",
                 border: OutlineInputBorder(),
@@ -87,11 +139,7 @@ class _EditProfilePagePasswordState  extends State<EditProfilePagePassword> {
               style: ElevatedButton.styleFrom(
                   backgroundColor: Color.fromRGBO(56, 189, 248, 1)
               ),
-              onPressed: () {
-                Navigator.pop(context, {
-                  "password": _passwordController.text,
-                });
-              },
+              onPressed: updatePassword,
               child: const Text("Išsaugoti",
                   style: TextStyle(
                       fontSize: 18,

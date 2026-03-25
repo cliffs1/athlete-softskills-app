@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'ProfilePageEdit.dart';
 import 'ProfilePageEditPassword.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -12,12 +13,49 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   File? _image;
-  String username = "Algirdas";
-  String email = "Algis123@email.com";
-  String password = "blablabla";
+  final supabase = Supabase.instance.client;
+
+  String username = "";
+  String email = "";
+  String password = ""; // ne tikras slaptazodis bus
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
+
+  Future<void> loadUserData() async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    try {
+      final data = await supabase
+          .from('naudotojas')
+          .select()
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+
+      setState(() {
+        username = data?['vardas'] ?? "Be vardo";
+        email = user.email ?? "Be el. pašto";
+        password = "********"; // hard coded :p
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error loading profile: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
