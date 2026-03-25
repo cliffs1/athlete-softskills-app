@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:softskills_app/pages/LoginPage.dart';
 import 'package:softskills_app/widgets/CalendarWidget.dart';
 import 'package:softskills_app/widgets/StatisticsWidget.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ProfilePage.dart';
 import '../widgets/TipsWidget.dart';
 import 'TestPage.dart';
+import 'MainPage.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -20,6 +22,17 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 
   bool isChecked = false;
+
+  Future<void> savePreference() async {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user != null) {
+      await Supabase.instance.client
+          .from('naudotojas')
+          .update({'hide_welcome': isChecked})
+          .eq('auth_user_id', user.id);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,11 +76,12 @@ class _WelcomePageState extends State<WelcomePage> {
             ),
             const SizedBox(height:80),
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                await savePreference();
+                Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const TestPage(),
+                    builder: (context) => const MainPage(),
                   ),
                 );
               },

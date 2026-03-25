@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:softskills_app/pages/CalendarPage.dart';
 
-class Calendarwidget extends StatelessWidget {
-  const Calendarwidget({super.key});
+class CalendarWidget extends StatelessWidget {
+  const CalendarWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
