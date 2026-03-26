@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'ProfilePageEdit.dart';
 import 'ProfilePageEditPassword.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+  
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  File? _image;
   final supabase = Supabase.instance.client;
 
   String username = "";
   String email = "";
-  String password = ""; // ne tikras slaptazodis bus
+  String password = "";
+  String? profilePicPath;
   bool isLoading = true;
 
   @override
@@ -29,7 +29,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> loadUserData() async {
     final user = supabase.auth.currentUser;
 
-    if (user == null) return;
+    if (user == null) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
 
     try {
       final data = await supabase
@@ -41,12 +46,26 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         username = data?['vardas'] ?? "Be vardo";
         email = user.email ?? "Be el. pašto";
-        password = "********"; // hard coded :p
+        password = "********";
+        profilePicPath = data?['profile_pic_path'];
         isLoading = false;
       });
     } catch (e) {
-      print("Error loading profile: $e");
+      debugPrint("Error loading profile: $e");
+      setState(() {
+        isLoading = false;
+      });
     }
+  }
+
+  String? getProfileImageUrl() {
+    if (profilePicPath == null || profilePicPath!.isEmpty) {
+      return null;
+    }
+
+    return supabase.storage
+        .from('profile_pictures')
+        .getPublicUrl(profilePicPath!);
   }
 
   @override
@@ -56,20 +75,29 @@ class _ProfilePageState extends State<ProfilePage> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    final profileImageUrl = getProfileImageUrl();
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        backgroundColor: Color.fromRGBO(167, 139, 250, 1),
+        backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
         title: const Text(
           "Profilis",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 0.0),
-            child: Image.asset(
-              'assets/brain_logo_goodremakecolor.png',
-              height: 60,
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Image.asset(
+                  'assets/brain_logo_goodremakecolor.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
         ],
@@ -89,14 +117,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   CircleAvatar(
                     radius: 35,
-                    backgroundImage: _image != null ? FileImage(_image!) : null,
-                    child: _image == null
+                    backgroundImage: profileImageUrl != null
+                        ? NetworkImage(profileImageUrl)
+                        : null,
+                    child: profileImageUrl == null
                         ? const Icon(Icons.person, size: 35)
                         : null,
                   ),
-
                   const SizedBox(width: 15),
-
                   Expanded(
                     child: Text(
                       username,
@@ -106,27 +134,34 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
-
                   IconButton(
                     icon: const Icon(Icons.settings),
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => EditProfilePage(
                             username: username,
-                            image: _image,
+                            profilePicPath: profilePicPath,
                           ),
                         ),
                       );
+
+                      if (result != null) {
+                        setState(() {
+                          username = result['vardas'] ?? username;
+                          profilePicPath =
+                              result['profile_pic_path'] ?? profilePicPath;
+                        });
+                      } else {
+                        await loadUserData();
+                      }
                     },
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 10),
-
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
@@ -141,9 +176,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 10),
-
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
@@ -158,45 +191,45 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 10),
-
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Color.fromRGBO(56, 189, 248, 1)
+                backgroundColor: const Color.fromRGBO(56, 189, 248, 1),
               ),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => EditProfilePagePassword(
-                        password: password
-                      )
-                  )
+                    builder: (context) => EditProfilePagePassword(
+                      password: password,
+                    ),
+                  ),
                 );
               },
-              child: const Text("Keisti slaptažodį",
+              child: const Text(
+                "Keisti slaptažodį",
                 style: TextStyle(
                   fontSize: 18,
-                  color: Color.fromRGBO(255, 255, 255, 1))
+                  color: Color.fromRGBO(255, 255, 255, 1),
+                ),
               ),
             ),
-
             const SizedBox(height: 10),
-
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color.fromRGBO(56, 189, 248, 1)
+                backgroundColor: const Color.fromRGBO(56, 189, 248, 1),
               ),
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text("Ištrinti paskyrą",
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: Color.fromRGBO(255, 255, 255, 1))
+              child: const Text(
+                "Ištrinti paskyrą",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Color.fromRGBO(255, 255, 255, 1),
+                ),
               ),
-            )
+            ),
           ],
         ),
       ),
