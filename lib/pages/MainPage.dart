@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:softskills_app/pages/LoginPage.dart';
-import 'package:softskills_app/pages/WelcomePage.dart';
 import 'package:softskills_app/widgets/CalendarWidget.dart';
 import 'package:softskills_app/widgets/StatisticsWidget.dart';
 import 'package:softskills_app/widgets/TestWidget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ProfilePage.dart';
 import '../widgets/TipsWidget.dart';
+import '../widgets/MotivationWidget.dart';
 import 'SettingsPage.dart';
 
 class MainPage extends StatefulWidget {
@@ -127,6 +127,8 @@ class _MainPageState extends State<MainPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
+            const SizedBox(height: 10),
+            MotivationWidget(),
             const SizedBox(height:10),
             TipsWidget(),
             const SizedBox(height:10),
@@ -135,7 +137,7 @@ class _MainPageState extends State<MainPage> {
             StatisticsWidget(),
             const SizedBox(height:10),
             TestWidget(),
-            const SizedBox(height:10)
+            const SizedBox(height:10),
           ],
         ),
       ),
