@@ -17,10 +17,12 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   final supabase = Supabase.instance.client;
+  bool showMotivation = true;
 
   @override
   void initState() {
   super.initState();
+  loadSettings();
   //testDatabase();
   }
 
@@ -38,6 +40,20 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
+  Future<void> loadSettings() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final data = await supabase
+        .from('naudotojas')
+        .select('show_motivation')
+        .eq('auth_user_id', user.id)
+        .single();
+
+    setState(() {
+      showMotivation = data['show_motivation'] ?? true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +88,7 @@ class _MainPageState extends State<MainPage> {
                 child: Align(
                   alignment: Alignment.bottomLeft,
                   child: Text(
-                    'Menu',
+                    'Meniu',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -83,7 +99,7 @@ class _MainPageState extends State<MainPage> {
             ),
             ListTile(
               leading: const Icon(Icons.person),
-              title: const Text('Profile'),
+              title: const Text('Profilis'),
               onTap: () {
                 Navigator.push(
                   context,
@@ -95,14 +111,17 @@ class _MainPageState extends State<MainPage> {
             ),
             ListTile(
               leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.push(
+              title: const Text('Nustatymai'),
+              onTap: () async {
+                final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsPage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const SettingsPage()),
                 );
+                if (result != null) {
+                  setState(() {
+                    showMotivation = result;
+                  });
+                }
               },
             ),
             ListTile(
@@ -128,7 +147,7 @@ class _MainPageState extends State<MainPage> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height: 10),
-            MotivationWidget(),
+            if (showMotivation) MotivationWidget(),
             const SizedBox(height:10),
             TipsWidget(),
             const SizedBox(height:10),

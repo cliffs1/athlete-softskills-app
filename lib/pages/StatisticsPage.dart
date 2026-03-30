@@ -30,7 +30,7 @@ class _StatisticspageState extends State<Statisticspage> {
   }
 
   Widget buildSkillSelector() {
-    final skills = ['Communication', 'Focus', 'Confidence', 'Teamwork'];
+    final skills = ['Komunikacija', 'Susikaupimas', 'Pasitikėjimas', 'Komandiškumas'];
 
     return SizedBox(
       height: 50,

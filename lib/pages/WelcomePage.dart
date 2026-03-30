@@ -15,10 +15,12 @@ class WelcomePage extends StatefulWidget {
 }
 
 class _WelcomePageState extends State<WelcomePage> {
+  String? userName;
 
   @override
   void initState() {
     super.initState();
+    loadUserName();
   }
 
   bool isChecked = false;
@@ -32,6 +34,21 @@ class _WelcomePageState extends State<WelcomePage> {
           .update({'hide_welcome': isChecked})
           .eq('auth_user_id', user.id);
     }
+  }
+  Future<void> loadUserName() async {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user == null) return;
+
+    final response = await Supabase.instance.client
+        .from('naudotojas')
+        .select('vardas')
+        .eq('auth_user_id', user.id)
+        .single();
+
+    setState(() {
+      userName = response['vardas'];
+    });
   }
 
   @override
@@ -54,67 +71,121 @@ class _WelcomePageState extends State<WelcomePage> {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            const SizedBox(height:20),
-            const Text("Sveiki *user*!", style: TextStyle(
-              fontSize: 30,
-              )
-            ),
-            const SizedBox(height:20),
-            const Text("Šita programėlė yra skirta tau tobulinti minkštuosius įgudžius.", style: TextStyle(
-              fontSize: 20,
-            ), textAlign: TextAlign.center,
-            ),
-            const SizedBox(height:5),
-            const Text("Joje galėsi įsivertinti savo įgūdžius atlikus testuką. "
-                "Po to gali sekti savo progresą ir tikrinti savo įgudžių vertinimus.", style: TextStyle(
-              fontSize: 20,
-            ), textAlign: TextAlign.center,
-            ),
-            const SizedBox(height:80),
-            ElevatedButton(
-              onPressed: () async {
-                await savePreference();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MainPage(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromRGBO(167, 139, 250, 0.25),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+
+                  Image.asset(
+                    'assets/brain_logo_goodremakecolor.png',
+                    height: 120,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color.fromRGBO(56, 189, 248, 1),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Tęsti',
-                style: TextStyle(fontSize: 18, color: Color.fromRGBO(255, 255, 255, 1)),
+
+                  const SizedBox(height: 20),
+
+                  Text(
+                    "Sveiki, ${userName ?? 'naudotojau'}!",
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: const Column(
+                      children: [
+                        Text(
+                          "Šita programėlė padės tau tobulinti minkštuosius įgūdžius 💡",
+                          style: TextStyle(fontSize: 18),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 15),
+                        Text(
+                          "• Atlik testus\n• Sek progresą\n• Stebėk savo augimą",
+                          style: TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  ElevatedButton(
+                    onPressed: () async {
+                      await savePreference();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MainPage(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromRGBO(56, 189, 248, 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: const Text(
+                      'Tęsti',
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Checkbox(
+                        value: isChecked,
+                        onChanged: (value) {
+                          setState(() {
+                            isChecked = value!;
+                          });
+                        },
+                      ),
+                      const Text("Nerodyti daugiau"),
+                    ],
+                  ),
+                ],
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Checkbox(
-                  value: isChecked,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      isChecked = value!;
-                    });
-                  },
-                ),
-                const Text("Nerodyti daugiau"),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
