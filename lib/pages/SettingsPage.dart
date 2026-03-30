@@ -15,15 +15,46 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final supabase = Supabase.instance.client;
+  bool showMotivation = true;
 
   @override
   void initState() {
     super.initState();
+    loadSettings();
+  }
+  Future<void> loadSettings() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final data = await supabase
+        .from('naudotojas')
+        .select('show_motivation')
+        .eq('auth_user_id', user.id)
+        .single();
+
+    setState(() {
+      showMotivation = data['show_motivation'] ?? true;
+    });
+  }
+
+  Future<void> updateMotivation(bool value) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    await supabase
+        .from('naudotojas')
+        .update({'show_motivation': value})
+        .eq('auth_user_id', user.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, showMotivation);
+        return false;
+      },
+      child: Scaffold(
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: Color.fromRGBO(167, 139, 250, 1),
@@ -42,14 +73,27 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
       body: Center(
+
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
             const SizedBox(height:10),
-            const Text("Nustatymai")
+            SwitchListTile(
+              title: const Text("Rodyti motyvaciją"),
+              subtitle: const Text("Motyvacinės citatos pagrindiniame puslapyje"),
+              value: showMotivation,
+              onChanged: (value) async {
+                setState(() {
+                  showMotivation = value;
+                });
+
+                await updateMotivation(value);
+              },
+            ),
           ],
         ),
       ),
+    ),
     );
   }
 }

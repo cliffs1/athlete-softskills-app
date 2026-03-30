@@ -34,6 +34,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_calendar_carousel: ^2.5.4
   fl_chart: ^1.2.0
+  intl: ^0.20.0
+  flutter_localization: ^0.4.0
 
 dev_dependencies:
   flutter_test:

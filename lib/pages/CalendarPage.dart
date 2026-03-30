@@ -22,6 +22,21 @@ class _CalendarpageState extends State<Calendarpage> {
   DateTime? _selectedDate = DateTime.now();
 
   late EventList<Event> _markedDateMap;
+  final List<String> ltDays = ['Sk', 'Pr', 'An', 'Tr', 'Kt', 'Pn', 'Št'];
+  List<String> ltMonths = [
+    'Sausis',
+    'Vasaris',
+    'Kovas',
+    'Balandis',
+    'Gegužė',
+    'Birželis',
+    'Liepa',
+    'Rugpjūtis',
+    'Rugsėjis',
+    'Spalis',
+    'Lapkritis',
+    'Gruodis',
+  ];
 
   @override
   void initState() {
@@ -65,11 +80,11 @@ class _CalendarpageState extends State<Calendarpage> {
   String _eventTitle(CalendarEventType type) {
     switch (type) {
       case CalendarEventType.training:
-        return 'Training Session';
+        return 'Treniruotė';
       case CalendarEventType.tournament:
-        return 'Tournament';
+        return 'Turnyras';
       case CalendarEventType.championship:
-        return 'Championship';
+        return 'Čempionatas';
     }
   }
   bool _eventAlreadyExists(DateTime day, String title) {
@@ -112,7 +127,7 @@ class _CalendarpageState extends State<Calendarpage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Add event'),
+          title: const Text('Pridėti įvykį'),
           content: StatefulBuilder(
             builder: (context, setDialogState) {
               return SingleChildScrollView(
@@ -120,7 +135,7 @@ class _CalendarpageState extends State<Calendarpage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     RadioListTile<CalendarEventType>(
-                      title: const Text('Training'),
+                      title: const Text('Treiniruotė'),
                       value: CalendarEventType.training,
                       groupValue: chosenType,
                       onChanged: (value) {
@@ -130,7 +145,7 @@ class _CalendarpageState extends State<Calendarpage> {
                       },
                     ),
                     RadioListTile<CalendarEventType>(
-                      title: const Text('Tournament'),
+                      title: const Text('Turnyras'),
                       value: CalendarEventType.tournament,
                       groupValue: chosenType,
                       onChanged: (value) {
@@ -140,7 +155,7 @@ class _CalendarpageState extends State<Calendarpage> {
                       },
                     ),
                     RadioListTile<CalendarEventType>(
-                      title: const Text('Championship'),
+                      title: const Text('Čempionatas'),
                       value: CalendarEventType.championship,
                       groupValue: chosenType,
                       onChanged: (value) {
@@ -151,7 +166,7 @@ class _CalendarpageState extends State<Calendarpage> {
                     ),
                     const Divider(),
                     CheckboxListTile(
-                      title: const Text('Repeat weekly'),
+                      title: const Text('Kartoti kas savaitė'),
                       value: isRecurring,
                       onChanged: (value) {
                         setDialogState(() {
@@ -167,12 +182,12 @@ class _CalendarpageState extends State<Calendarpage> {
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Repeat on:',
+                          'Kartoti:',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                       CheckboxListTile(
-                        title: const Text('Monday'),
+                        title: const Text('Pirmadienį'),
                         value: selectedWeekdays.contains(DateTime.monday),
                         onChanged: (value) {
                           setDialogState(() {
@@ -183,7 +198,7 @@ class _CalendarpageState extends State<Calendarpage> {
                         },
                       ),
                       CheckboxListTile(
-                        title: const Text('Tuesday'),
+                        title: const Text('Antradienį'),
                         value: selectedWeekdays.contains(DateTime.tuesday),
                         onChanged: (value) {
                           setDialogState(() {
@@ -194,7 +209,7 @@ class _CalendarpageState extends State<Calendarpage> {
                         },
                       ),
                       CheckboxListTile(
-                        title: const Text('Wednesday'),
+                        title: const Text('Trečiadienį'),
                         value: selectedWeekdays.contains(DateTime.wednesday),
                         onChanged: (value) {
                           setDialogState(() {
@@ -205,7 +220,7 @@ class _CalendarpageState extends State<Calendarpage> {
                         },
                       ),
                       CheckboxListTile(
-                        title: const Text('Thursday'),
+                        title: const Text('Ketvirtadienį'),
                         value: selectedWeekdays.contains(DateTime.thursday),
                         onChanged: (value) {
                           setDialogState(() {
@@ -216,7 +231,7 @@ class _CalendarpageState extends State<Calendarpage> {
                         },
                       ),
                       CheckboxListTile(
-                        title: const Text('Friday'),
+                        title: const Text('Penktadienį'),
                         value: selectedWeekdays.contains(DateTime.friday),
                         onChanged: (value) {
                           setDialogState(() {
@@ -227,7 +242,7 @@ class _CalendarpageState extends State<Calendarpage> {
                         },
                       ),
                       CheckboxListTile(
-                        title: const Text('Saturday'),
+                        title: const Text('Šeštadienį'),
                         value: selectedWeekdays.contains(DateTime.saturday),
                         onChanged: (value) {
                           setDialogState(() {
@@ -238,7 +253,7 @@ class _CalendarpageState extends State<Calendarpage> {
                         },
                       ),
                       CheckboxListTile(
-                        title: const Text('Sunday'),
+                        title: const Text('Sekmadienį'),
                         value: selectedWeekdays.contains(DateTime.sunday),
                         onChanged: (value) {
                           setDialogState(() {
@@ -251,7 +266,7 @@ class _CalendarpageState extends State<Calendarpage> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Text('Until: '),
+                          const Text('Iki: '),
                           TextButton(
                             onPressed: () async {
                               final picked = await showDatePicker(
@@ -259,6 +274,7 @@ class _CalendarpageState extends State<Calendarpage> {
                                 initialDate: recurrenceEndDate,
                                 firstDate: selectedDay,
                                 lastDate: DateTime(2100),
+                                locale: const Locale('lt', 'LT'),
                               );
                               if (picked != null) {
                                 setDialogState(() {
@@ -281,7 +297,7 @@ class _CalendarpageState extends State<Calendarpage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Atšaukti'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -317,7 +333,7 @@ class _CalendarpageState extends State<Calendarpage> {
 
                 Navigator.pop(context);
               },
-              child: const Text('Save'),
+              child: const Text('Išsaugoti'),
             ),
           ],
         );
@@ -382,12 +398,66 @@ class _CalendarpageState extends State<Calendarpage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_left),
+                    onPressed: () {
+                      setState(() {
+                        _currentDate = DateTime(
+                          _currentDate.year,
+                          _currentDate.month - 1,
+                        );
+                      });
+                    },
+                  ),
+
+                  Text(
+                    '${ltMonths[_currentDate.month - 1]} ${_currentDate.year}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  IconButton(
+                    icon: const Icon(Icons.arrow_right),
+                    onPressed: () {
+                      setState(() {
+                        _currentDate = DateTime(
+                          _currentDate.year,
+                          _currentDate.month + 1,
+                        );
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
             CalendarCarousel<Event>(
               onDayPressed: (date, events) {
                 setState(() {
                   _selectedDate = _dateOnly(date);
                   _currentDate = _dateOnly(date);
                 });
+              },
+
+              customWeekDayBuilder: (int index, String day) {
+                return Expanded(
+                  child: Center(
+                    child: Text(
+                      ltDays[index],
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
               },
               selectedDateTime: _selectedDate,
               targetDateTime: _currentDate,
@@ -404,7 +474,7 @@ class _CalendarpageState extends State<Calendarpage> {
               selectedDayButtonColor: const Color.fromRGBO(167, 139, 250, 1),
               todayButtonColor: Colors.deepPurpleAccent,
               daysTextStyle: const TextStyle(color: Colors.black),
-              showHeader: true,
+              showHeader: false,
               weekFormat: false,
               height: 420,
               iconColor: const Color.fromRGBO(167, 139, 250, 1),

@@ -66,7 +66,17 @@ class _TestPageState extends State<TestPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text('Question ${currentQuestion + 1} / $totalQuestions'),
+        backgroundColor: Color.fromRGBO(167, 139, 250, 1),
+        title: Text('Klausimas ${currentQuestion + 1} / $totalQuestions'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 0.0),
+            child: Image.asset(
+              'assets/brain_logo_goodremakecolor.png',
+              height: 60,
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -97,7 +107,7 @@ class _TestPageState extends State<TestPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Question ${index + 1}',
+                            'Klausimas ${index + 1}',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -105,7 +115,7 @@ class _TestPageState extends State<TestPage> {
                           ),
                           const SizedBox(height: 12),
                           const Text(
-                            'Placeholder question text goes here.',
+                            'Pavyzdinis klausimas.',
                             style: TextStyle(fontSize: 18),
                           ),
                           const SizedBox(height: 32),
@@ -154,7 +164,7 @@ class _TestPageState extends State<TestPage> {
                                 child: OutlinedButton(
                                   onPressed:
                                       index == 0 ? null : goToPreviousQuestion,
-                                  child: const Text('Back'),
+                                  child: const Text('Atgal'),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -167,8 +177,8 @@ class _TestPageState extends State<TestPage> {
                                         },
                                   child: Text(
                                     index == totalQuestions - 1
-                                        ? 'Submit'
-                                        : 'Next',
+                                        ? 'Pateikti'
+                                        : 'Kitas',
                                   ),
                                 ),
                               ),
