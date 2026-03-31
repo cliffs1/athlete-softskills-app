@@ -8,6 +8,7 @@ import 'ProfilePage.dart';
 import '../widgets/TipsWidget.dart';
 import '../widgets/MotivationWidget.dart';
 import 'SettingsPage.dart';
+import '../widgets/DiaryWidget.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -154,6 +155,8 @@ class _MainPageState extends State<MainPage> {
             CalendarWidget(),
             const SizedBox(height:10),
             StatisticsWidget(),
+            const SizedBox(height:10),
+            DiaryWidget(),
             const SizedBox(height:10),
             TestWidget(),
             const SizedBox(height:10),
