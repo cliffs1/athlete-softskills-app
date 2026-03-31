@@ -15,13 +15,33 @@ class _RegisterPageState extends State<RegisterPage> {
   final usernameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  String? selectedSport;
+
+  final List<String> sports = [
+    "Tinklinis",
+    "Krepšinis",
+    "Futbolas"
+  ];
+
+  int getSportId(String sport) {
+    switch (sport) {
+      case "Tinklinis":
+        return 4;
+      case "Krepšinis":
+        return 1;
+      case "Futbolas":
+        return 2;
+      default:
+        return 0;
+    }
+  }
 
  Future<void> register() async {
   String username = usernameController.text.trim();
   String email = emailController.text.trim();
   String password = passwordController.text.trim();
 
-  if (username.isEmpty || email.isEmpty || password.isEmpty) {
+  if (username.isEmpty || email.isEmpty || password.isEmpty || selectedSport == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Užpildykite visus laukus")),
     );
@@ -47,7 +67,7 @@ class _RegisterPageState extends State<RegisterPage> {
       'auth_user_id': user.id,
       'vardas': username,
       'el_pastas': email,
-      'fk_sporto_saka': null,
+      'fk_sporto_saka': getSportId(selectedSport!),
     });
 
     if (!mounted) return;
@@ -171,6 +191,34 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: const InputDecoration(
                     hintText: "Įveskite slaptažodį",
                     border: OutlineInputBorder(),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                const Text("Sporto šaka:", style: TextStyle(
+                  fontSize: 18,
+                  color: Color.fromRGBO(11, 18, 32, 1),
+                )),
+
+                const SizedBox(height: 6),
+
+                DropdownButtonFormField<String>(
+                  value: selectedSport,
+                  items: sports.map((sport) {
+                    return DropdownMenuItem(
+                      value: sport,
+                      child: Text(sport),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedSport = value;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: "Pasirinkite sportą",
                   ),
                 ),
 
