@@ -16,42 +16,293 @@ class DiaryPage extends StatefulWidget {
 }
 
 class _DiaryPageState extends State<DiaryPage> {
+  final supabase = Supabase.instance.client;
+  bool? completedToday;
+  final int totalQuestions = 5;
+  final List<int?> answers = List<int?>.filled(4, null);
+  String emotionalText = "";
+  late final PageController _pageController;
+  int currentQuestion = 0;
+  final TextEditingController _textController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
+    checkIfCompletedToday();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> checkIfCompletedToday() async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    final today = DateTime.now().toIso8601String().split('T')[0];
+
+    final response = await supabase
+        .from('dienorastis')
+        .select()
+        .eq('user_id', user.id)
+        .eq('entry_date', today);
+
+    setState(() {
+      completedToday = response.isNotEmpty;
+    });
+  }
+
+  Future<void> goToNextQuestion() async {
+    if (currentQuestion < totalQuestions - 1) {
+      await _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      final user = supabase.auth.currentUser;
+
+      if (user == null) return;
+
+      try {
+        await supabase.from('dienorastis').insert({
+          'user_id': user.id,
+          'emocijostekstas': emotionalText,
+        });
+
+        setState(() {
+          completedToday = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dienoraštis išsaugotas')),
+        );
+        Navigator.pop(context, true);
+
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Klaida: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> goToPreviousQuestion() async {
+    if (currentQuestion > 0) {
+      await _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  bool canProceed(int index) {
+    if (index < 4) {
+      return answers[index] != null;
+    } else {
+      return emotionalText.trim().isNotEmpty;
+    }
+  }
+
+  int wordCount(String text) {
+    return text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
   }
 
 
   @override
   Widget build(BuildContext context) {
+    final progress = (currentQuestion + 1) / totalQuestions;
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        backgroundColor: Color.fromRGBO(167, 139, 250, 1),
+        backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
         title: const Text(
           "Dienoraštis",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          Image.asset(
+            'assets/brain_logo_goodremakecolor.png',
+            height: 60,
+          ),
+        ],
+      ),
+      body: completedToday == null
+          ? const Center(child: CircularProgressIndicator())
+          : completedToday!
+          ? Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(50),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              const SizedBox(width: 10),
+              const Text(
+                "Šiandien jau užpildei dienoraštį!",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      )
+          : Column(
+        children: [
           Padding(
-            padding: const EdgeInsets.only(right: 0.0),
-            child: Image.asset(
-              'assets/brain_logo_goodremakecolor.png',
-              height: 60,
+            padding: const EdgeInsets.all(16),
+            child: LinearProgressIndicator(value: progress),
+          ),
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: totalQuestions,
+              onPageChanged: (index) {
+                setState(() {
+                  currentQuestion = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: index < 4
+                          ? buildScaleQuestion(index)
+                          : buildTextQuestion(),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            const SizedBox(height: 10),
-            Text('Dienoraštis')
-          ],
+    );
+  }
+
+  Widget buildScaleQuestion(int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Klausimas ${index + 1}',
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
-      ),
+        const SizedBox(height: 12),
+        const Text(
+          'Kaip jautiesi šiandien?',
+          style: TextStyle(fontSize: 18),
+        ),
+        const SizedBox(height: 32),
+        Wrap(
+          spacing: 12,
+          children: List.generate(5, (i) {
+            final value = i + 1;
+            final selected = answers[index] == value;
+
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  answers[index] = value;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 56,
+                height: 56,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: selected ? Colors.blue : Colors.grey.shade200,
+                ),
+                child: Text(
+                  value.toString(),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: selected ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        const Spacer(),
+        navigationButtons(index),
+      ],
+    );
+  }
+
+  Widget buildTextQuestion() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Kaip jautiesi šiandien? (savo žodžiais)',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _textController,
+          maxLines: 6,
+          onChanged: (value) {
+            if (wordCount(value) <= 200) {
+              setState(() {
+                emotionalText = value;
+              });
+            }
+          },
+          decoration: const InputDecoration(
+            hintText: 'Parašyk iki 200 žodžių...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Žodžiai: ${wordCount(_textController.text)} / 200',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        const Spacer(),
+        navigationButtons(4),
+      ],
+    );
+  }
+
+  Widget navigationButtons(int index) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: index == 0 ? null : goToPreviousQuestion,
+            child: const Text('Atgal'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: canProceed(index) ? goToNextQuestion : null,
+            child: Text(index == totalQuestions - 1 ? 'Išsaugoti' : 'Kitas'),
+          ),
+        ),
+      ],
     );
   }
 }
