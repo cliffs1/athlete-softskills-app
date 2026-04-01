@@ -10,6 +10,7 @@ import '../widgets/MotivationWidget.dart';
 import 'SettingsPage.dart';
 import '../widgets/DiaryWidget.dart';
 import '../widgets/DiaryReminderWidget.dart';
+import '../widgets/CompetitionReflectionReminderWidget.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -152,6 +153,8 @@ class _MainPageState extends State<MainPage> {
             if (showMotivation) MotivationWidget(),
             const SizedBox(height: 10),
             DiaryReminderWidget(),
+            const SizedBox(height:10),
+            CompetitionReflectionReminderWidget(),
             const SizedBox(height:10),
             TipsWidget(),
             const SizedBox(height:10),

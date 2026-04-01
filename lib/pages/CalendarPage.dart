@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart'
-    show CalendarCarousel;
 import 'package:flutter_calendar_carousel/classes/event.dart';
 import 'package:flutter_calendar_carousel/classes/event_list.dart';
+import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart'
+    show CalendarCarousel;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum CalendarEventType {
   training,
@@ -18,12 +19,18 @@ class Calendarpage extends StatefulWidget {
 }
 
 class _CalendarpageState extends State<Calendarpage> {
+  static const int _stressHighlightDays = 3;
+
+  final supabase = Supabase.instance.client;
+
   DateTime _currentDate = DateTime.now();
   DateTime? _selectedDate = DateTime.now();
+  bool _isLoadingEvents = true;
 
   late EventList<Event> _markedDateMap;
+
   final List<String> ltDays = ['Sk', 'Pr', 'An', 'Tr', 'Kt', 'Pn', 'Št'];
-  List<String> ltMonths = [
+  final List<String> ltMonths = [
     'Sausis',
     'Vasaris',
     'Kovas',
@@ -42,10 +49,59 @@ class _CalendarpageState extends State<Calendarpage> {
   void initState() {
     super.initState();
     _markedDateMap = EventList<Event>(events: {});
+    _loadEventsFromDatabase();
   }
 
   DateTime _dateOnly(DateTime date) {
     return DateTime(date.year, date.month, date.day);
+  }
+
+  CalendarEventType? _eventTypeFromTitle(String? title) {
+    switch (title) {
+      case 'Treniruotė':
+        return CalendarEventType.training;
+      case 'Turnyras':
+        return CalendarEventType.tournament;
+      case 'Čempionatas':
+        return CalendarEventType.championship;
+      default:
+        return null;
+    }
+  }
+
+  CalendarEventType? _eventTypeFromDatabase(String? value) {
+    switch (value) {
+      case 'treniruote':
+        return CalendarEventType.training;
+      case 'turnyras':
+        return CalendarEventType.tournament;
+      case 'cempionatas':
+        return CalendarEventType.championship;
+      default:
+        return null;
+    }
+  }
+
+  String _eventTypeValue(CalendarEventType type) {
+    switch (type) {
+      case CalendarEventType.training:
+        return 'treniruote';
+      case CalendarEventType.tournament:
+        return 'turnyras';
+      case CalendarEventType.championship:
+        return 'cempionatas';
+    }
+  }
+
+  String _eventTitle(CalendarEventType type) {
+    switch (type) {
+      case CalendarEventType.training:
+        return 'Treniruotė';
+      case CalendarEventType.tournament:
+        return 'Turnyras';
+      case CalendarEventType.championship:
+        return 'Čempionatas';
+    }
   }
 
   Widget _eventIcon(CalendarEventType type) {
@@ -72,51 +128,264 @@ class _CalendarpageState extends State<Calendarpage> {
             color: Colors.orange,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.workspace_premium, color: Colors.white, size: 16),
+          child: const Icon(
+            Icons.workspace_premium,
+            color: Colors.white,
+            size: 16,
+          ),
         );
     }
   }
 
-  String _eventTitle(CalendarEventType type) {
-    switch (type) {
-      case CalendarEventType.training:
-        return 'Treniruotė';
-      case CalendarEventType.tournament:
-        return 'Turnyras';
-      case CalendarEventType.championship:
-        return 'Čempionatas';
-    }
+  Event _calendarEventFromType({
+    required int id,
+    required DateTime day,
+    required CalendarEventType type,
+  }) {
+    return Event(
+      id: id,
+      date: _dateOnly(day),
+      title: _eventTitle(type),
+      description: _eventTypeValue(type),
+      icon: _eventIcon(type),
+    );
   }
+
   bool _eventAlreadyExists(DateTime day, String title) {
     final events = _markedDateMap.getEvents(day);
     return events.any((event) => event.title == title);
   }
-  void _addRecurringEvent({
-    required DateTime startDate,
-    required DateTime endDate,
-    required List<int> weekdays,
-    required CalendarEventType type,
-  }) {
-    DateTime current = _dateOnly(startDate);
-    final last = _dateOnly(endDate);
-    final title = _eventTitle(type);
 
-    while (!current.isAfter(last)) {
-      if (weekdays.contains(current.weekday) &&
-          !_eventAlreadyExists(current, title)) {
-        _markedDateMap.add(
-          current,
-          Event(
-            date: current,
-            title: title,
-            icon: _eventIcon(type),
+  int? _stressDaysUntilEvent(DateTime day) {
+    final normalizedDay = _dateOnly(day);
+    int? closestStressDay;
+
+    for (final entry in _markedDateMap.events.entries) {
+      final eventDay = _dateOnly(entry.key);
+      final daysUntilEvent = eventDay.difference(normalizedDay).inDays;
+
+      if (daysUntilEvent < 1 || daysUntilEvent > _stressHighlightDays) {
+        continue;
+      }
+
+      final hasStressfulEvent = entry.value.any((event) {
+        final type = _eventTypeFromTitle(event.title);
+        return type == CalendarEventType.tournament ||
+            type == CalendarEventType.championship;
+      });
+
+      if (!hasStressfulEvent) {
+        continue;
+      }
+
+      if (closestStressDay == null || daysUntilEvent < closestStressDay) {
+        closestStressDay = daysUntilEvent;
+      }
+    }
+
+    return closestStressDay;
+  }
+
+  Color? _stressHighlightColor(DateTime day) {
+    switch (_stressDaysUntilEvent(day)) {
+      case 1:
+        return Colors.red.withValues(alpha: 0.30);
+      case 2:
+        return Colors.orange.withValues(alpha: 0.22);
+      case 3:
+        return Colors.amber.withValues(alpha: 0.18);
+      default:
+        return null;
+    }
+  }
+
+  Widget? _buildStressDay(
+    bool isSelectedDay,
+    bool isToday,
+    bool isPrevMonthDay,
+    TextStyle textStyle,
+    bool isNextMonthDay,
+    DateTime day,
+  ) {
+    final highlightColor = _stressHighlightColor(day);
+    if (highlightColor == null || isPrevMonthDay || isNextMonthDay) {
+      return null;
+    }
+
+    final foregroundColor = isSelectedDay || isToday
+        ? Colors.white
+        : textStyle.color ?? Colors.black;
+
+    return Container(
+      margin: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isSelectedDay
+            ? const Color.fromRGBO(167, 139, 250, 1)
+            : highlightColor,
+        shape: BoxShape.circle,
+        border: isToday && !isSelectedDay
+            ? Border.all(color: Colors.deepPurpleAccent, width: 2)
+            : null,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '${day.day}',
+        style: textStyle.copyWith(
+          color: foregroundColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _loadEventsFromDatabase() async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingEvents = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await supabase
+          .from('events')
+          .select('id, event_type, event_date')
+          .eq('user_id', user.id)
+          .order('event_date');
+
+      final events = <DateTime, List<Event>>{};
+
+      for (final row in response) {
+        final eventId = row['id'] as int?;
+        final eventType = _eventTypeFromDatabase(row['event_type'] as String?);
+        final eventDateRaw = row['event_date'] as String?;
+
+        if (eventId == null || eventType == null || eventDateRaw == null) {
+          continue;
+        }
+
+        final eventDay = _dateOnly(DateTime.parse(eventDateRaw).toLocal());
+        events.putIfAbsent(eventDay, () => []);
+        events[eventDay]!.add(
+          _calendarEventFromType(
+            id: eventId,
+            day: eventDay,
+            type: eventType,
           ),
         );
       }
 
-      current = current.add(const Duration(days: 1));
+      if (!mounted) return;
+      setState(() {
+        _markedDateMap = EventList<Event>(events: events);
+        _isLoadingEvents = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingEvents = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Nepavyko užkrauti kalendoriaus įvykių: $e')),
+      );
     }
   }
+
+  Future<void> _addSingleEventToDatabase({
+    required DateTime day,
+    required CalendarEventType type,
+  }) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final inserted = await supabase
+        .from('events')
+        .insert({
+          'user_id': user.id,
+          'event_type': _eventTypeValue(type),
+          'event_date': day.toIso8601String(),
+        })
+        .select('id, event_type, event_date')
+        .single();
+
+    final insertedId = inserted['id'] as int;
+    final insertedType =
+        _eventTypeFromDatabase(inserted['event_type'] as String?) ?? type;
+    final insertedDate = DateTime.parse(inserted['event_date'] as String)
+        .toLocal();
+
+    _markedDateMap.add(
+      _dateOnly(insertedDate),
+      _calendarEventFromType(
+        id: insertedId,
+        day: insertedDate,
+        type: insertedType,
+      ),
+    );
+  }
+
+  Future<int> _addRecurringEventsToDatabase({
+    required DateTime startDate,
+    required DateTime endDate,
+    required List<int> weekdays,
+    required CalendarEventType type,
+  }) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return 0;
+
+    final payload = <Map<String, dynamic>>[];
+    final title = _eventTitle(type);
+    DateTime current = _dateOnly(startDate);
+    final last = _dateOnly(endDate);
+
+    while (!current.isAfter(last)) {
+      if (weekdays.contains(current.weekday) &&
+          !_eventAlreadyExists(current, title)) {
+        payload.add({
+          'user_id': user.id,
+          'event_type': _eventTypeValue(type),
+          'event_date': current.toIso8601String(),
+        });
+      }
+
+      current = current.add(const Duration(days: 1));
+    }
+
+    if (payload.isEmpty) {
+      return 0;
+    }
+
+    final insertedRows = await supabase
+        .from('events')
+        .insert(payload)
+        .select('id, event_type, event_date');
+
+    for (final row in insertedRows) {
+      final eventId = row['id'] as int?;
+      final eventType = _eventTypeFromDatabase(row['event_type'] as String?);
+      final eventDateRaw = row['event_date'] as String?;
+
+      if (eventId == null || eventType == null || eventDateRaw == null) {
+        continue;
+      }
+
+      final eventDay = _dateOnly(DateTime.parse(eventDateRaw).toLocal());
+      _markedDateMap.add(
+        eventDay,
+        _calendarEventFromType(
+          id: eventId,
+          day: eventDay,
+          type: eventType,
+        ),
+      );
+    }
+
+    return insertedRows.length;
+  }
+
   Future<void> _showAddEventDialog(DateTime selectedDay) async {
     CalendarEventType? chosenType;
     bool isRecurring = false;
@@ -135,7 +404,7 @@ class _CalendarpageState extends State<Calendarpage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     RadioListTile<CalendarEventType>(
-                      title: const Text('Treiniruotė'),
+                      title: const Text('Treniruotė'),
                       value: CalendarEventType.training,
                       groupValue: chosenType,
                       onChanged: (value) {
@@ -166,7 +435,7 @@ class _CalendarpageState extends State<Calendarpage> {
                     ),
                     const Divider(),
                     CheckboxListTile(
-                      title: const Text('Kartoti kas savaitė'),
+                      title: const Text('Kartoti kas savaitę'),
                       value: isRecurring,
                       onChanged: (value) {
                         setDialogState(() {
@@ -300,38 +569,63 @@ class _CalendarpageState extends State<Calendarpage> {
               child: const Text('Atšaukti'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (chosenType == null) return;
 
                 final day = _dateOnly(selectedDay);
 
-                setState(() {
+                try {
                   if (isRecurring) {
                     if (selectedWeekdays.isEmpty) return;
 
-                    _addRecurringEvent(
+                    final insertedCount = await _addRecurringEventsToDatabase(
                       startDate: day,
                       endDate: recurrenceEndDate,
                       weekdays: selectedWeekdays.toList(),
                       type: chosenType!,
                     );
+
+                    if (!mounted) return;
+                    setState(() {});
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          insertedCount > 0
+                              ? 'Pasikartojantys įvykiai išsaugoti'
+                              : 'Tokie pasikartojantys įvykiai jau egzistuoja',
+                        ),
+                      ),
+                    );
                   } else {
                     final title = _eventTitle(chosenType!);
 
-                    if (!_eventAlreadyExists(day, title)) {
-                      _markedDateMap.add(
-                        day,
-                        Event(
-                          date: day,
-                          title: title,
-                          icon: _eventIcon(chosenType!),
+                    if (_eventAlreadyExists(day, title)) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Toks įvykis šiai dienai jau egzistuoja'),
                         ),
                       );
+                      return;
                     }
-                  }
-                });
 
-                Navigator.pop(context);
+                    await _addSingleEventToDatabase(
+                      day: day,
+                      type: chosenType!,
+                    );
+
+                    if (!mounted) return;
+                    setState(() {});
+                  }
+
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Nepavyko išsaugoti įvykio: $e')),
+                  );
+                }
               },
               child: const Text('Išsaugoti'),
             ),
@@ -345,36 +639,195 @@ class _CalendarpageState extends State<Calendarpage> {
     return _markedDateMap.getEvents(_dateOnly(date));
   }
 
-  void _deleteEvent(DateTime date, Event event) {
+  Future<void> _deleteEvent(DateTime date, Event event) async {
     final day = _dateOnly(date);
 
-    setState(() {
-      final events = List<Event>.from(_markedDateMap.getEvents(day));
-      events.remove(event);
-
-      _markedDateMap = EventList<Event>(events: {
-        ..._markedDateMap.events,
-        day: events,
-      });
-
-      if (events.isEmpty) {
-        _markedDateMap.events.remove(day);
+    try {
+      if (event.id != null) {
+        await supabase.from('events').delete().eq('id', event.id!);
       }
-    });
+
+      if (!mounted) return;
+      setState(() {
+        final events = List<Event>.from(_markedDateMap.getEvents(day));
+        events.remove(event);
+
+        _markedDateMap = EventList<Event>(events: {
+          ..._markedDateMap.events,
+          day: events,
+        });
+
+        if (events.isEmpty) {
+          _markedDateMap.events.remove(day);
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Nepavyko ištrinti įvykio: $e')),
+      );
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildCalendarBody() {
     final selectedEvents = _selectedDate != null
         ? _getEventsForDay(_selectedDate!)
         : <Event>[];
 
+    if (_isLoadingEvents) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_left),
+                  onPressed: () {
+                    setState(() {
+                      _currentDate = DateTime(
+                        _currentDate.year,
+                        _currentDate.month - 1,
+                      );
+                    });
+                  },
+                ),
+                Text(
+                  '${ltMonths[_currentDate.month - 1]} ${_currentDate.year}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_right),
+                  onPressed: () {
+                    setState(() {
+                      _currentDate = DateTime(
+                        _currentDate.year,
+                        _currentDate.month + 1,
+                      );
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          CalendarCarousel<Event>(
+            onDayPressed: (date, events) {
+              setState(() {
+                _selectedDate = _dateOnly(date);
+                _currentDate = _dateOnly(date);
+              });
+            },
+            customDayBuilder: (
+              isSelectable,
+              index,
+              isSelectedDay,
+              isToday,
+              isPrevMonthDay,
+              textStyle,
+              isNextMonthDay,
+              isThisMonthDay,
+              day,
+            ) {
+              return _buildStressDay(
+                isSelectedDay,
+                isToday,
+                isPrevMonthDay,
+                textStyle,
+                isNextMonthDay,
+                day,
+              );
+            },
+            customWeekDayBuilder: (int index, String day) {
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    ltDays[index],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              );
+            },
+            selectedDateTime: _selectedDate,
+            targetDateTime: _currentDate,
+            markedDatesMap: _markedDateMap,
+            markedDateShowIcon: true,
+            markedDateIconMaxShown: 3,
+            markedDateMoreShowTotal: false,
+            thisMonthDayBorderColor: Colors.grey,
+            weekendTextStyle: const TextStyle(color: Colors.red),
+            headerTextStyle: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            selectedDayButtonColor: const Color.fromRGBO(167, 139, 250, 1),
+            todayButtonColor: Colors.deepPurpleAccent,
+            daysTextStyle: const TextStyle(color: Colors.black),
+            showHeader: false,
+            weekFormat: false,
+            height: 420,
+            iconColor: const Color.fromRGBO(167, 139, 250, 1),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            _selectedDate != null
+                ? 'Pasirinkta data: ${_selectedDate!.day}-${_selectedDate!.month}-${_selectedDate!.year}'
+                : 'Pasirinkite datą',
+            style: const TextStyle(fontSize: 18),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: selectedEvents.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Šiai dienai nėra įvykių',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: selectedEvents.length,
+                    itemBuilder: (context, index) {
+                      final event = selectedEvents[index];
+                      return Card(
+                        child: ListTile(
+                          leading: event.icon,
+                          title: Text(event.title ?? ''),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () {
+                              _deleteEvent(_selectedDate!, event);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
         title: const Text(
-          "Kalendorius",
+          'Kalendorius',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -394,129 +847,7 @@ class _CalendarpageState extends State<Calendarpage> {
               onPressed: () => _showAddEventDialog(_selectedDate!),
               child: const Icon(Icons.add),
             ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_left),
-                    onPressed: () {
-                      setState(() {
-                        _currentDate = DateTime(
-                          _currentDate.year,
-                          _currentDate.month - 1,
-                        );
-                      });
-                    },
-                  ),
-
-                  Text(
-                    '${ltMonths[_currentDate.month - 1]} ${_currentDate.year}',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  IconButton(
-                    icon: const Icon(Icons.arrow_right),
-                    onPressed: () {
-                      setState(() {
-                        _currentDate = DateTime(
-                          _currentDate.year,
-                          _currentDate.month + 1,
-                        );
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            CalendarCarousel<Event>(
-              onDayPressed: (date, events) {
-                setState(() {
-                  _selectedDate = _dateOnly(date);
-                  _currentDate = _dateOnly(date);
-                });
-              },
-
-              customWeekDayBuilder: (int index, String day) {
-                return Expanded(
-                  child: Center(
-                    child: Text(
-                      ltDays[index],
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                );
-              },
-              selectedDateTime: _selectedDate,
-              targetDateTime: _currentDate,
-              markedDatesMap: _markedDateMap,
-              markedDateShowIcon: true,
-              markedDateIconMaxShown: 3,
-              markedDateMoreShowTotal: false,
-              thisMonthDayBorderColor: Colors.grey,
-              weekendTextStyle: const TextStyle(color: Colors.red),
-              headerTextStyle: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              selectedDayButtonColor: const Color.fromRGBO(167, 139, 250, 1),
-              todayButtonColor: Colors.deepPurpleAccent,
-              daysTextStyle: const TextStyle(color: Colors.black),
-              showHeader: false,
-              weekFormat: false,
-              height: 420,
-              iconColor: const Color.fromRGBO(167, 139, 250, 1),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              _selectedDate != null
-                  ? 'Pasirinkta data: ${_selectedDate!.day}-${_selectedDate!.month}-${_selectedDate!.year}'
-                  : 'Pasirinkite datą',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: selectedEvents.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Šiai dienai nėra įvykių',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: selectedEvents.length,
-                      itemBuilder: (context, index) {
-                        final event = selectedEvents[index];
-                        return Card(
-                          child: ListTile(
-                            leading: event.icon,
-                            title: Text(event.title ?? ''),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () {
-                                _deleteEvent(_selectedDate!, event);
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+      body: _buildCalendarBody(),
     );
   }
 }
