@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../pages/DiaryPage.dart';
+import '../main.dart';
 
 class DiaryReminderWidget extends StatefulWidget {
   const DiaryReminderWidget({super.key});
@@ -9,15 +10,39 @@ class DiaryReminderWidget extends StatefulWidget {
   State<DiaryReminderWidget> createState() => _DiaryReminderWidgetState();
 }
 
-class _DiaryReminderWidgetState extends State<DiaryReminderWidget> {
+class _DiaryReminderWidgetState extends State<DiaryReminderWidget> with RouteAware {
   final supabase = Supabase.instance.client;
-
+  bool _isSubscribed = false;
   bool? showReminder;
 
   @override
   void initState() {
     super.initState();
     checkDiary();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isSubscribed) {
+      final route = ModalRoute.of(context);
+      if (route is PageRoute) {
+        routeObserver.subscribe(this, route);
+        _isSubscribed = true;
+      }
+    }
+  }
+
+  @override
+  void didPopNext() {
+    checkDiary();
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
   }
 
   Future<void> checkDiary() async {
