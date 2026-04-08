@@ -204,7 +204,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 6),
 
                 DropdownButtonFormField<String>(
-                  value: selectedSport,
+                  initialValue: selectedSport,
                   items: sports.map((sport) {
                     return DropdownMenuItem(
                       value: sport,
