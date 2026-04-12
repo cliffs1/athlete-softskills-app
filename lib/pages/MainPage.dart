@@ -11,6 +11,7 @@ import 'SettingsPage.dart';
 import '../widgets/DiaryWidget.dart';
 import '../widgets/DiaryReminderWidget.dart';
 import '../widgets/CompetitionReflectionReminderWidget.dart';
+import '../widgets/BreathingWidget.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -166,6 +167,8 @@ class _MainPageState extends State<MainPage> {
             const SizedBox(height:10),
             TestWidget(),
             const SizedBox(height:10),
+            BreathingWidget(),
+            const SizedBox(height:10)
           ],
         ),
       ),
