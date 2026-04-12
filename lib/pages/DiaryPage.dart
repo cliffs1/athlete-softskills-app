@@ -71,6 +71,7 @@ class _DiaryPageState extends State<DiaryPage> {
       try {
         await supabase.from('dienorastis').insert({
           'user_id': user.id,
+          'entry_date': DateTime.now().toIso8601String().split('T')[0],
           'emocijostekstas': emotionalText,
         });
 
