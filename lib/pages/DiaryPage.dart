@@ -24,6 +24,10 @@ class _DiaryPageState extends State<DiaryPage> {
   late final PageController _pageController;
   int currentQuestion = 0;
   final TextEditingController _textController = TextEditingController();
+  List<String> questions = ["Ar šiandien bandei pritaikyti naujai išmoktas žinias?",
+    "Kaip vertini savo pasitikėjimą savimi šiandien?",
+    "Kaip gerai bendravai su komandos nariais?",
+    "Kaip vertini savo tobulėjimą?"];
 
   @override
   void initState() {
@@ -69,11 +73,17 @@ class _DiaryPageState extends State<DiaryPage> {
       if (user == null) return;
 
       try {
-        await supabase.from('dienorastis').insert({
+        final Map<String, dynamic> data = {
           'user_id': user.id,
           'entry_date': DateTime.now().toIso8601String().split('T')[0],
           'emocijostekstas': emotionalText,
-        });
+        };
+
+        for (int i = 0; i < answers.length; i++) {
+          data['q${i + 1}'] = answers[i];
+        }
+
+        await supabase.from('dienorastis').insert(data);
 
         setState(() {
           completedToday = true;
@@ -200,6 +210,10 @@ class _DiaryPageState extends State<DiaryPage> {
   }
 
   Widget buildScaleQuestion(int index) {
+    if (index == 0) {
+      return buildYesNoQuestion(index);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -208,8 +222,8 @@ class _DiaryPageState extends State<DiaryPage> {
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Kaip jautiesi šiandien?',
+        Text(
+          questions[index],
           style: TextStyle(fontSize: 18),
         ),
         const SizedBox(height: 32),
@@ -232,7 +246,9 @@ class _DiaryPageState extends State<DiaryPage> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: selected ? Colors.blue : Colors.grey.shade200,
+                  color: selected
+                      ? const Color.fromRGBO(56, 189, 248, 1)
+                      : Colors.grey.shade200,
                 ),
                 child: Text(
                   value.toString(),
@@ -252,12 +268,76 @@ class _DiaryPageState extends State<DiaryPage> {
     );
   }
 
+  Widget buildYesNoQuestion(int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Klausimas ${index + 1}',
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          questions[index],
+          style: const TextStyle(fontSize: 18),
+        ),
+        const SizedBox(height: 32),
+
+        Row(
+          children: [
+            Expanded(
+              child: yesNoButton(index, 1, "Taip"),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: yesNoButton(index, 0, "Ne"),
+            ),
+          ],
+        ),
+
+        const Spacer(),
+        navigationButtons(index),
+      ],
+    );
+  }
+
+  Widget yesNoButton(int index, int value, String text) {
+    final selected = answers[index] == value;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          answers[index] = value;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 60,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: selected
+              ? const Color.fromRGBO(56, 189, 248, 1)
+              : Colors.grey.shade200,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: selected ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget buildTextQuestion() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Kaip jautiesi šiandien? (savo žodžiais)',
+          'Kaip bendrai jautiesi šiandien? (savo žodžiais)',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
@@ -292,6 +372,20 @@ class _DiaryPageState extends State<DiaryPage> {
       children: [
         Expanded(
           child: OutlinedButton(
+            style: ButtonStyle(
+              side: WidgetStateProperty.resolveWith<BorderSide>((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return BorderSide(color: Colors.grey.shade300);
+                }
+                return const BorderSide(color: Color.fromRGBO(167, 139, 250, 1));
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return Colors.grey;
+                }
+                return const Color.fromRGBO(11, 18, 32, 1);
+              }),
+            ),
             onPressed: index == 0 ? null : goToPreviousQuestion,
             child: const Text('Atgal'),
           ),
@@ -299,6 +393,15 @@ class _DiaryPageState extends State<DiaryPage> {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                if (states.contains(WidgetState.disabled)) {
+                  return Colors.grey.shade300;
+                }
+                return const Color.fromRGBO(56, 189, 248, 1);
+              }),
+              foregroundColor: WidgetStateProperty.all(Colors.white),
+            ),
             onPressed: canProceed(index) ? goToNextQuestion : null,
             child: Text(index == totalQuestions - 1 ? 'Išsaugoti' : 'Kitas'),
           ),
