@@ -4,6 +4,7 @@ import 'package:flutter_calendar_carousel/classes/event_list.dart';
 import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart'
     show CalendarCarousel;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../main.dart';
 
 enum CalendarEventType {
   training,
@@ -18,10 +19,11 @@ class Calendarpage extends StatefulWidget {
   State<Calendarpage> createState() => _CalendarpageState();
 }
 
-class _CalendarpageState extends State<Calendarpage> {
+class _CalendarpageState extends State<Calendarpage> with RouteAware {
   static const int _stressHighlightDays = 3;
 
   final supabase = Supabase.instance.client;
+  bool _isSubscribed = false;
 
   DateTime _currentDate = DateTime.now();
   DateTime? _selectedDate = DateTime.now();
@@ -50,6 +52,30 @@ class _CalendarpageState extends State<Calendarpage> {
     super.initState();
     _markedDateMap = EventList<Event>(events: {});
     _loadEventsFromDatabase();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isSubscribed) {
+      final route = ModalRoute.of(context);
+      if (route is PageRoute) {
+        routeObserver.subscribe(this, route);
+        _isSubscribed = true;
+      }
+    }
+  }
+
+  @override
+  void didPopNext() {
+    _loadEventsFromDatabase();
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
   }
 
   DateTime _dateOnly(DateTime date) {
@@ -148,6 +174,25 @@ class _CalendarpageState extends State<Calendarpage> {
       title: _eventTitle(type),
       description: _eventTypeValue(type),
       icon: _eventIcon(type),
+    );
+  }
+
+  Event _diaryEvent({
+    required int id,
+    required DateTime day,
+  }) {
+    return Event(
+      id: id,
+      date: _dateOnly(day),
+      title: 'Dienorastis uzpildytas',
+      description: 'dienorastis',
+      icon: Container(
+        decoration: const BoxDecoration(
+          color: Colors.green,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.edit_note, color: Colors.white, size: 16),
+      ),
     );
   }
 
@@ -277,6 +322,41 @@ class _CalendarpageState extends State<Calendarpage> {
           ),
         );
       }
+
+      try {
+        final diaryResponse = await supabase
+            .from('dienorastis')
+            .select('id, entry_date')
+            .eq('user_id', user.id)
+            .order('entry_date');
+
+        for (final row in diaryResponse) {
+          final rawDiaryId = row['id'];
+          final diaryDateRaw = row['entry_date'] as String?;
+
+          if (rawDiaryId == null || diaryDateRaw == null) {
+            continue;
+          }
+
+          final diaryId = rawDiaryId.toString().hashCode;
+
+          final diaryDay = _dateOnly(DateTime.parse(diaryDateRaw).toLocal());
+          events.putIfAbsent(diaryDay, () => []);
+
+          final alreadyMarked = events[diaryDay]!.any(
+            (event) => event.description == 'dienorastis',
+          );
+
+          if (!alreadyMarked) {
+            events[diaryDay]!.add(
+              _diaryEvent(
+                id: diaryId,
+                day: diaryDay,
+              ),
+            );
+          }
+        }
+      } catch (_) {}
 
       if (!mounted) return;
       setState(() {
@@ -642,6 +722,10 @@ class _CalendarpageState extends State<Calendarpage> {
   Future<void> _deleteEvent(DateTime date, Event event) async {
     final day = _dateOnly(date);
 
+    if (event.description == 'dienorastis') {
+      return;
+    }
+
     try {
       if (event.id != null) {
         await supabase.from('events').delete().eq('id', event.id!);
@@ -800,16 +884,19 @@ class _CalendarpageState extends State<Calendarpage> {
                     itemCount: selectedEvents.length,
                     itemBuilder: (context, index) {
                       final event = selectedEvents[index];
+                      final isDiaryEvent = event.description == 'dienorastis';
                       return Card(
                         child: ListTile(
                           leading: event.icon,
                           title: Text(event.title ?? ''),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () {
-                              _deleteEvent(_selectedDate!, event);
-                            },
-                          ),
+                          trailing: isDiaryEvent
+                              ? null
+                              : IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () {
+                                    _deleteEvent(_selectedDate!, event);
+                                  },
+                                ),
                         ),
                       );
                     },
