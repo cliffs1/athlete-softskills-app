@@ -205,6 +205,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 DropdownButtonFormField<String>(
                   initialValue: selectedSport,
+                  isExpanded: true,
                   items: sports.map((sport) {
                     return DropdownMenuItem(
                       value: sport,
