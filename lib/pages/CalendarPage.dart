@@ -5,12 +5,7 @@ import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart'
     show CalendarCarousel;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
-
-enum CalendarEventType {
-  training,
-  tournament,
-  championship,
-}
+import '../utils/calendar_logic.dart';
 
 class Calendarpage extends StatefulWidget {
   const Calendarpage({super.key});
