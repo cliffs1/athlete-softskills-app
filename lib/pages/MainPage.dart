@@ -12,6 +12,8 @@ import '../widgets/DiaryWidget.dart';
 import '../widgets/DiaryReminderWidget.dart';
 import '../widgets/CompetitionReflectionReminderWidget.dart';
 import '../widgets/BreathingWidget.dart';
+import '../dashboards/PlayerDashboard.dart';
+import '../dashboards/CoachDashboard.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -22,6 +24,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   final supabase = Supabase.instance.client;
   bool showMotivation = true;
+  String role = 'player';
 
   @override
   void initState() {
@@ -50,12 +53,13 @@ class _MainPageState extends State<MainPage> {
 
     final data = await supabase
         .from('naudotojas')
-        .select('show_motivation')
+        .select('show_motivation, role')
         .eq('auth_user_id', user.id)
         .single();
 
     setState(() {
       showMotivation = data['show_motivation'] ?? true;
+      role = data['role'] ?? 'player';
     });
   }
 
@@ -146,32 +150,9 @@ class _MainPageState extends State<MainPage> {
           ],
         ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            const SizedBox(height: 10),
-            if (showMotivation) MotivationWidget(),
-            const SizedBox(height: 10),
-            DiaryReminderWidget(),
-            const SizedBox(height:10),
-            CompetitionReflectionReminderWidget(),
-            const SizedBox(height:10),
-            TipsWidget(),
-            const SizedBox(height:10),
-            CalendarWidget(),
-            const SizedBox(height:10),
-            StatisticsWidget(),
-            const SizedBox(height:10),
-            DiaryWidget(),
-            const SizedBox(height:10),
-            TestWidget(),
-            const SizedBox(height:10),
-            BreathingWidget(),
-            const SizedBox(height:10)
-          ],
-        ),
-      ),
+      body: role == 'coach'
+        ? const CoachDashboard()
+        : const PlayerDashboard(),
     );
   }
 }

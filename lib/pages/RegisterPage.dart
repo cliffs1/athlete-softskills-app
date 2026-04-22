@@ -16,6 +16,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   String? selectedSport;
+  String selectedRole = 'player';
 
   final List<String> sports = [
     "Tinklinis",
@@ -68,6 +69,7 @@ class _RegisterPageState extends State<RegisterPage> {
       'vardas': username,
       'el_pastas': email,
       'fk_sporto_saka': getSportId(selectedSport!),
+      'role': selectedRole,
     });
 
     if (!mounted) return;
@@ -220,6 +222,36 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     hintText: "Pasirinkite sportą",
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                const Text(
+                  "Rolė:",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color.fromRGBO(11, 18, 32, 1),
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(value: 'player', child: Text('Žaidėjas')),
+                    DropdownMenuItem(value: 'coach', child: Text('Treneris')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedRole = value!;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: "Pasirinkite rolę",
                   ),
                 ),
 
