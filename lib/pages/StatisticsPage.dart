@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_radar_chart/flutter_radar_chart.dart' as radar;
-import 'dart:math';
+import 'package:softskills_app/widgets/subscription_gate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Statisticspage extends StatefulWidget {
@@ -20,9 +20,7 @@ class SkillData {
 }
 
 class _StatisticspageState extends State<Statisticspage> {
-  final Random random = Random();
   bool showRadar = true;
-  late List<FlSpot> spots;
   final supabase = Supabase.instance.client;
   List<SkillData> skills = [];
   bool loading = true;
@@ -62,9 +60,7 @@ class _StatisticspageState extends State<Statisticspage> {
   }
 
   List<SkillData> get filteredSkills {
-    return skills
-        .where((s) => s.category == selectedCategory)
-        .toList();
+    return skills.where((s) => s.category == selectedCategory).toList();
   }
 
   Widget buildRadarChart() {
@@ -84,12 +80,12 @@ class _StatisticspageState extends State<Statisticspage> {
       child: SizedBox(
         height: 250,
         child: radar.RadarChart(
-          ticks: [2, 4, 6, 8, 10],
+          ticks: const [2, 4, 6, 8, 10],
           features: filteredSkills.map((e) => e.skill).toList(),
           data: [
             filteredSkills.map((e) => e.value).toList(),
           ],
-          graphColors: [Colors.blue],
+          graphColors: const [Colors.blue],
           outlineColor: Colors.grey,
         ),
       ),
@@ -175,64 +171,130 @@ class _StatisticspageState extends State<Statisticspage> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: showRadar
-                  ? Color.fromRGBO(79, 97, 127, 1)
+                  ? const Color.fromRGBO(79, 97, 127, 1)
                   : Colors.grey[300],
             ),
-            child: const Text("Voratinklio diagrama", style: TextStyle(color: Color.fromRGBO(255, 255, 255, 1)),),
+            child: const Text(
+              'Voratinklio diagrama',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              setState(() {
-                showRadar = false;
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: !showRadar
-                  ? Color.fromRGBO(79, 97, 127, 1)
-                  : Colors.grey[300],
+          child: SubscriptionGate(
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  showRadar = false;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: !showRadar
+                    ? const Color.fromRGBO(79, 97, 127, 1)
+                    : Colors.grey[300],
+              ),
+              child: const Text(
+                'Stulpelinė diagrama',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white),
+              ),
             ),
-            child: const Text("Stulpelinė diagrama", style: TextStyle(color: Color.fromRGBO(255, 255, 255, 1)),),
+            fallback: ElevatedButton(
+              onPressed: null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[300],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock_outline, size: 16),
+                  SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Stulpelinė diagrama',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-
   Widget buildSkillSelector() {
-    final categories = ['socialiniai', 'emociniai', 'protiniai'];
-
     return SizedBox(
       height: 50,
-      child: ListView.builder(
+      child: ListView(
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final cat = categories[index];
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  selectedCategory = cat;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedCategory == cat
-                    ? const Color.fromRGBO(79, 97, 127, 1)
-                    : Colors.grey[300],
-              ),
-              child: Text(
-                cat,
-                style: const TextStyle(color: Colors.white),
-              ),
+        children: [
+          buildCategoryButton(
+            label: 'socialiniai',
+            category: 'socialiniai',
+          ),
+          SubscriptionGate(
+            child: buildCategoryButton(
+              label: 'emociniai',
+              category: 'emociniai',
             ),
-          );
+            fallback: buildLockedCategoryButton('emociniai'),
+          ),
+          SubscriptionGate(
+            child: buildCategoryButton(
+              label: 'protiniai',
+              category: 'protiniai',
+            ),
+            fallback: buildLockedCategoryButton('protiniai'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildCategoryButton({
+    required String label,
+    required String category,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ElevatedButton(
+        onPressed: () {
+          setState(() {
+            selectedCategory = category;
+          });
         },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: selectedCategory == category
+              ? const Color.fromRGBO(79, 97, 127, 1)
+              : Colors.grey[300],
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget buildLockedCategoryButton(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ElevatedButton(
+        onPressed: null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.grey[300],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, size: 16),
+            const SizedBox(width: 6),
+            Text(label),
+          ],
+        ),
       ),
     );
   }
@@ -241,9 +303,9 @@ class _StatisticspageState extends State<Statisticspage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color.fromRGBO(229, 231, 235, 1),
+        color: const Color.fromRGBO(229, 231, 235, 1),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
             color: Colors.black12,
             blurRadius: 8,
@@ -252,7 +314,10 @@ class _StatisticspageState extends State<Statisticspage> {
       ),
       child: Column(
         children: [
-          Text(title, style: TextStyle(color: Color.fromRGBO(11, 18, 32, 1))),
+          Text(
+            title,
+            style: const TextStyle(color: Color.fromRGBO(11, 18, 32, 1)),
+          ),
           const SizedBox(height: 8),
           Text(
             value,
@@ -270,11 +335,11 @@ class _StatisticspageState extends State<Statisticspage> {
     return Row(
       children: [
         Expanded(
-          child: buildStatCard("Pokytis", "+25%"), //<-- hardcoded kol kas
+          child: buildStatCard('Pokytis', '+25%'),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: buildStatCard("Vidurkis", "6.8"), //<-- hardcoded kol kas
+          child: buildStatCard('Vidurkis', '6.8'),
         ),
       ],
     );
@@ -285,14 +350,14 @@ class _StatisticspageState extends State<Statisticspage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        backgroundColor: Color.fromRGBO(167, 139, 250, 1),
+        backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
         title: const Text(
-          "Statistika",
+          'Statistika',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 0.0),
+            padding: const EdgeInsets.only(right: 0),
             child: Image.asset(
               'assets/brain_logo_goodremakecolor.png',
               height: 60,
@@ -309,6 +374,16 @@ class _StatisticspageState extends State<Statisticspage> {
             const SizedBox(height: 16),
             buildChartToggle(),
             const SizedBox(height: 16),
+            const SubscriptionGate(
+              child: SizedBox.shrink(),
+              fallback: Padding(
+                padding: EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Su prenumerata atrakinsi papildomas kategorijas ir stulpelinę diagramą.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+            ),
             showRadar ? buildRadarChart() : buildBarChart(),
             const SizedBox(height: 16),
             buildStatsRow(),

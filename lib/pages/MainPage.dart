@@ -121,15 +121,11 @@ class _MainPageState extends State<MainPage> {
               leading: const Icon(Icons.settings),
               title: const Text('Nustatymai'),
               onTap: () async {
-                final result = await Navigator.push(
+                await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const SettingsPage()),
                 );
-                if (result != null) {
-                  setState(() {
-                    showMotivation = result;
-                  });
-                }
+                await loadSettings();
               },
             ),
             ListTile(
