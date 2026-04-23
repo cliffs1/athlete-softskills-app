@@ -4,6 +4,7 @@ import 'pages/MainPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:softskills_app/services/subscription_service.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
 RouteObserver<ModalRoute<void>>();
@@ -16,6 +17,7 @@ void main() async {
     url: 'https://ewsjzgdnxuqtjroehtgy.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3c2p6Z2RueHVxdGpyb2VodGd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MzcxNTMsImV4cCI6MjA4ODMxMzE1M30.Vt6ibckFc6vTeB05LKByOyohqpyOGnxlzL0BumDwHIQ',
   );
+  await SubscriptionService.instance.load();
   runApp(const MyApp());
 }
 

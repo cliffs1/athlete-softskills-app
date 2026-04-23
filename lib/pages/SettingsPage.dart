@@ -1,27 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:softskills_app/pages/LoginPage.dart';
-import 'package:softskills_app/pages/WelcomePage.dart';
-import 'package:softskills_app/widgets/CalendarWidget.dart';
-import 'package:softskills_app/widgets/StatisticsWidget.dart';
+import 'package:softskills_app/services/subscription_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'ProfilePage.dart';
-import '../widgets/TipsWidget.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
   final supabase = Supabase.instance.client;
+
   bool showMotivation = true;
+  bool subscriptionEnabled = SubscriptionService.instance.isEnabled;
 
   @override
   void initState() {
     super.initState();
+    SubscriptionService.instance.addListener(_syncSubscriptionState);
     loadSettings();
   }
+
+  @override
+  void dispose() {
+    SubscriptionService.instance.removeListener(_syncSubscriptionState);
+    super.dispose();
+  }
+
+  void _syncSubscriptionState() {
+    if (!mounted) return;
+
+    setState(() {
+      subscriptionEnabled = SubscriptionService.instance.isEnabled;
+    });
+  }
+
   Future<void> loadSettings() async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
@@ -49,22 +63,17 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        Navigator.pop(context, showMotivation);
-        return false;
-      },
-      child: Scaffold(
+    return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        backgroundColor: Color.fromRGBO(167, 139, 250, 1),
+        backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
         title: const Text(
-          "Algora",
+          'Algora',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 0.0),
+            padding: const EdgeInsets.only(right: 0),
             child: Image.asset(
               'assets/brain_logo_goodremakecolor.png',
               height: 60,
@@ -73,14 +82,15 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
       body: Center(
-
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
-            const SizedBox(height:10),
+            const SizedBox(height: 10),
             SwitchListTile(
-              title: const Text("Rodyti motyvaciją"),
-              subtitle: const Text("Motyvacinės citatos pagrindiniame puslapyje"),
+              title: const Text('Rodyti motyvaciją'),
+              subtitle: const Text(
+                'Motyvacinės citatos pagrindiniame puslapyje',
+              ),
               value: showMotivation,
               onChanged: (value) async {
                 setState(() {
@@ -90,10 +100,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 await updateMotivation(value);
               },
             ),
+            SwitchListTile(
+              title: const Text('Prenumerata'),
+              subtitle: const Text(
+                'Įjungia premium turinio rodymą programėlėje',
+              ),
+              value: subscriptionEnabled,
+              onChanged: (value) async {
+                await SubscriptionService.instance.setEnabled(value);
+              },
+            ),
           ],
         ),
       ),
-    ),
     );
   }
 }
