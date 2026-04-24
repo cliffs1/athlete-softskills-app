@@ -13,10 +13,21 @@ class Statisticspage extends StatefulWidget {
 
 class SkillData {
   final String skill;
-  final double value;
+  final double currentValue;
+  final double weekAgoValue;
   final String category;
 
-  SkillData(this.skill, this.value, this.category);
+  SkillData(this.skill, this.currentValue, this.weekAgoValue, this.category);
+}
+
+class SkillFetchResult {
+  final List<SkillData> skills;
+  final bool hasHistory;
+
+  SkillFetchResult({
+    required this.skills,
+    required this.hasHistory,
+  });
 }
 
 class _StatisticspageState extends State<Statisticspage> {
@@ -24,7 +35,8 @@ class _StatisticspageState extends State<Statisticspage> {
   final supabase = Supabase.instance.client;
   List<SkillData> skills = [];
   bool loading = true;
-  String selectedCategory = 'socialiniai';
+  String selectedCategory = 'Socialiniai';
+  bool hasHistoryData = false;
 
   @override
   void initState() {
@@ -33,30 +45,70 @@ class _StatisticspageState extends State<Statisticspage> {
   }
 
   Future<void> loadSkills() async {
-    skills = await fetchSkills();
+    final result = await fetchSkills();
+
     setState(() {
+      skills = result.skills;
+      hasHistoryData = result.hasHistory;
       loading = false;
     });
   }
 
-  Future<List<SkillData>> fetchSkills() async {
+  Future<SkillFetchResult> fetchSkills() async {
     final user = supabase.auth.currentUser;
-    if (user == null) return [];
+    if (user == null) {
+      return SkillFetchResult(skills: [], hasHistory: false);
+    }
 
-    final response = await supabase
+    final currentResponse = await supabase
         .from('naudotojo_minkstieji')
-        .select('svoris, minkstieji_gebejimai(pavadinimas, kategorija)')
+        .select(
+      'fk_minkstieji_gebejimai, svoris, minkstieji_gebejimai(pavadinimas, kategorija)',
+    )
         .eq('fk_naudotojas', user.id);
 
-    final data = response as List;
+    final weekAgoResponse = await supabase
+        .from('naudotojo_minkstieji_history')
+        .select('fk_minkstieji_gebejimai, svoris, created_at')
+        .eq('fk_naudotojas', user.id)
+        .lte(
+      'created_at',
+      DateTime.now()
+          .subtract(const Duration(days: 7))
+          .toIso8601String(),
+    )
+        .order('created_at', ascending: false);
 
-    return data.map((item) {
+    final currentData = currentResponse as List;
+    final weekAgoData = weekAgoResponse as List;
+
+    final hasHistory = weekAgoData.isNotEmpty;
+
+    final Map<int, double> weekAgoMap = {};
+    for (var item in weekAgoData) {
+      final skillId = item['fk_minkstieji_gebejimai'];
+
+      weekAgoMap.putIfAbsent(
+        skillId,
+            () => (item['svoris'] as num).toDouble(),
+      );
+    }
+
+    final skills = currentData.map((item) {
+      final skillId = item['fk_minkstieji_gebejimai'];
+
       return SkillData(
         item['minkstieji_gebejimai']['pavadinimas'],
         (item['svoris'] as num).toDouble(),
+        weekAgoMap[skillId] ?? 0,
         item['minkstieji_gebejimai']['kategorija'],
       );
     }).toList();
+
+    return SkillFetchResult(
+      skills: skills,
+      hasHistory: hasHistory,
+    );
   }
 
   List<SkillData> get filteredSkills {
@@ -82,10 +134,20 @@ class _StatisticspageState extends State<Statisticspage> {
         child: radar.RadarChart(
           ticks: const [2, 4, 6, 8, 10],
           features: filteredSkills.map((e) => e.skill).toList(),
-          data: [
-            filteredSkills.map((e) => e.value).toList(),
+          data: hasHistoryData ? [
+            filteredSkills.map((e) => e.weekAgoValue).toList(),
+            filteredSkills.map((e) => e.currentValue).toList(),
+          ] :
+          [
+            filteredSkills.map((e) => e.currentValue).toList(),
           ],
-          graphColors: const [Colors.blue],
+          graphColors: hasHistoryData ? const [
+            Colors.grey,
+            Colors.blue,
+          ] :
+          [
+            Colors.blue,
+          ],
           outlineColor: Colors.grey,
         ),
       ),
@@ -112,15 +174,32 @@ class _StatisticspageState extends State<Statisticspage> {
           BarChartData(
             maxY: 10,
             barGroups: List.generate(filteredSkills.length, (index) {
+              final skill = filteredSkills[index];
               return BarChartGroupData(
                 x: index,
-                barRods: [
+                barRods: hasHistoryData ? [
                   BarChartRodData(
-                    toY: filteredSkills[index].value,
-                    width: 18,
-                    borderRadius: BorderRadius.circular(6),
+                    toY: skill.weekAgoValue,
+                    width: 8,
+                    color: Colors.grey,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  BarChartRodData(
+                    toY: skill.currentValue,
+                    width: 8,
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(4),
+                 ),
+                ] :
+                [
+                  BarChartRodData(
+                    toY: skill.currentValue,
+                    width: 8,
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ],
+              barsSpace: 4,
               );
             }),
             titlesData: FlTitlesData(
@@ -135,16 +214,19 @@ class _StatisticspageState extends State<Statisticspage> {
 
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        filteredSkills[value.toInt()].skill,
-                        style: const TextStyle(fontSize: 10),
+                      child: Transform.rotate(
+                          angle: -0.2,
+                          child: Text(
+                            filteredSkills[value.toInt()].skill,
+                            style: const TextStyle(fontSize: 10),
+                          ),
                       ),
                     );
                   },
                 ),
               ),
               leftTitles: const AxisTitles(
-                sideTitles: SideTitles(showTitles: true),
+                sideTitles: SideTitles(showTitles: true, reservedSize: 26),
               ),
               topTitles: const AxisTitles(
                 sideTitles: SideTitles(showTitles: false),
@@ -232,22 +314,22 @@ class _StatisticspageState extends State<Statisticspage> {
         scrollDirection: Axis.horizontal,
         children: [
           buildCategoryButton(
-            label: 'socialiniai',
-            category: 'socialiniai',
+            label: 'Socialiniai',
+            category: 'Socialiniai',
           ),
           SubscriptionGate(
             child: buildCategoryButton(
-              label: 'emociniai',
-              category: 'emociniai',
+              label: 'Emociniai',
+              category: 'Emociniai',
             ),
-            fallback: buildLockedCategoryButton('emociniai'),
+            fallback: buildLockedCategoryButton('Emociniai'),
           ),
           SubscriptionGate(
             child: buildCategoryButton(
-              label: 'protiniai',
-              category: 'protiniai',
+              label: 'Kognityviniai',
+              category: 'Kognityviniai',
             ),
-            fallback: buildLockedCategoryButton('protiniai'),
+            fallback: buildLockedCategoryButton('Kognityviniai'),
           ),
         ],
       ),
@@ -299,7 +381,7 @@ class _StatisticspageState extends State<Statisticspage> {
     );
   }
 
-  Widget buildStatCard(String title, String value) {
+  Widget buildStatCard(String title, String value1, String value2) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -318,9 +400,17 @@ class _StatisticspageState extends State<Statisticspage> {
             title,
             style: const TextStyle(color: Color.fromRGBO(11, 18, 32, 1)),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
-            value,
+            value1,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value2,
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -331,16 +421,114 @@ class _StatisticspageState extends State<Statisticspage> {
     );
   }
 
+  double getAverageAbsoluteChange() {
+    if (filteredSkills.isEmpty) return 0;
+
+    double total = 0;
+
+    for (final s in filteredSkills) {
+      total += (s.currentValue - s.weekAgoValue);
+    }
+
+    return total / filteredSkills.length;
+  }
+
+  double calculatePercentChange(double current, double previous) {
+    if (previous == 0) return 0;
+    return ((current - previous) / previous) * 100;
+  }
+
+  double getAveragePercentChange() {
+    if (filteredSkills.isEmpty) return 0;
+
+    double totalChange = 0;
+
+    for (final skill in filteredSkills) {
+      totalChange += calculatePercentChange(
+        skill.currentValue,
+        skill.weekAgoValue,
+      );
+    }
+
+    return totalChange / filteredSkills.length;
+  }
+
+  double getCurrentAverage() {
+    if (filteredSkills.isEmpty) return 0;
+
+    double total = 0;
+
+    for (final s in filteredSkills) {
+      total += s.currentValue;
+    }
+
+    return total / filteredSkills.length;
+  }
+
+  double getWeekAgoAverage() {
+    if (filteredSkills.isEmpty) return 0;
+
+    double total = 0;
+
+    for (final s in filteredSkills) {
+      total += s.weekAgoValue;
+    }
+
+    return total / filteredSkills.length;
+  }
+
   Widget buildStatsRow() {
     return Row(
       children: [
         Expanded(
-          child: buildStatCard('Pokytis', '+25%'),
+          child: buildStatCard(
+            'Bendras pokytis',
+            hasHistoryData ? '+${getAverageAbsoluteChange().toStringAsFixed(1)}' : 'Nėra istorijos',
+            hasHistoryData ? '(${getAveragePercentChange().toStringAsFixed(0)}%)' : ''
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: buildStatCard('Vidurkis', '6.8'),
+          child: buildStatCard(
+              'Bendras vidurkis',
+              'Dabartinis ${getCurrentAverage().toStringAsFixed(2)}',
+              hasHistoryData ? 'Prieš savaitė ${getWeekAgoAverage().toStringAsFixed(2)}' : ''
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget buildSkillBreakdown() {
+    return Column(
+      children: filteredSkills.map((s) {
+        final diff = s.currentValue - s.weekAgoValue;
+
+        final percent = s.weekAgoValue == 0
+            ? 0
+            : (diff / s.weekAgoValue) * 100;
+
+        return ListTile(
+          title: Text(s.skill),
+          trailing: Text(
+            hasHistoryData ? '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(1)} '
+                             '(${percent.toStringAsFixed(0)}%)'
+                :  'Dabartinė reikšmė: ${s.currentValue}',
+            style: TextStyle(
+              color: diff >= 0 ? Colors.green : Colors.red,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget legendItem(Color color, String text) {
+    return Row(
+      children: [
+        Container(width: 12, height: 12, color: color),
+        const SizedBox(width: 6),
+        Text(text),
       ],
     );
   }
@@ -365,30 +553,49 @@ class _StatisticspageState extends State<Statisticspage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            buildSkillSelector(),
-            const SizedBox(height: 16),
-            buildChartToggle(),
-            const SizedBox(height: 16),
-            const SubscriptionGate(
-              child: SizedBox.shrink(),
-              fallback: Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Text(
-                  'Su prenumerata atrakinsi papildomas kategorijas ir stulpelinę diagramą.',
-                  style: TextStyle(color: Colors.black54),
-                ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                buildSkillSelector(),
+                const SizedBox(height: 16),
+                buildChartToggle(),
+                const SizedBox(height: 4),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: hasHistoryData ? [
+                      legendItem(Colors.grey, 'Prieš savaitę'),
+                      const SizedBox(width: 10),
+                      legendItem(Colors.blue, 'Dabar'),
+                    ] :
+                    [
+                      legendItem(Colors.blue, 'Dabar'),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+                  showRadar ? buildRadarChart() : buildBarChart(),
+
+                  const SizedBox(height: 10),
+                  buildStatsRow(),
+
+                  const SizedBox(height: 10),
+                  buildSkillBreakdown(),
+                ],
               ),
             ),
-            showRadar ? buildRadarChart() : buildBarChart(),
-            const SizedBox(height: 16),
-            buildStatsRow(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
