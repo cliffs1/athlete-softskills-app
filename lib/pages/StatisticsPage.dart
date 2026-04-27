@@ -483,8 +483,8 @@ class _StatisticspageState extends State<Statisticspage> {
         Expanded(
           child: buildStatCard(
             'Bendras pokytis',
-            hasHistoryData ? '+${getAverageAbsoluteChange().toStringAsFixed(1)}' : 'Nėra istorijos',
-            hasHistoryData ? '(${getAveragePercentChange().toStringAsFixed(0)}%)' : ''
+            hasHistoryData ? '+${getAverageAbsoluteChange().toStringAsFixed(2)}' : 'Nera istorijos',
+            hasHistoryData ? '(${getAveragePercentChange().toStringAsFixed(2)}%)' : ''
           ),
         ),
         const SizedBox(width: 12),
@@ -511,9 +511,9 @@ class _StatisticspageState extends State<Statisticspage> {
         return ListTile(
           title: Text(s.skill),
           trailing: Text(
-            hasHistoryData ? '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(1)} '
-                             '(${percent.toStringAsFixed(0)}%)'
-                :  'Dabartinė reikšmė: ${s.currentValue}',
+            hasHistoryData ? '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(2)} '
+                             '(${percent.toStringAsFixed(2)}%)'
+                :  'Dabartine reiksme: ${s.currentValue.toStringAsFixed(2)}',
             style: TextStyle(
               color: diff >= 0 ? Colors.green : Colors.red,
             ),
