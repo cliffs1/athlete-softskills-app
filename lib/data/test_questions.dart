@@ -53,85 +53,85 @@ class SoftSkillQuestionCategory {
 const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
   SoftSkillQuestionCategory(
     id: 'lyderyste',
-    title: 'Lyderyste',
-    dbSkillName: 'lyderyste',
+    title: 'Lyderystė',
+    dbSkillName: 'lyderystė',
     questions: [
       SoftSkillQuestion(
-        question: 'Kaip elgiates, kai komandoje kyla konfliktas tarp nariu?',
+        question: 'Kaip elgiatės, kai komandoje kyla konfliktas tarp narių?',
         options: [
           QuestionOption(
             id: 'a',
-            text: 'Ignoruojate konflikta, tikedamasis, kad jis issispres savaime',
+            text: 'Ignoruojate konfliktą, tikėdamasis, kad jis išsispręs savaime',
             weight: 3,
           ),
           QuestionOption(
             id: 'b',
-            text: 'Pasirenku viena puse ir ja palaikau',
+            text: 'Pasirenkate vieną pusę ir ją palaikote',
             weight: 0,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Isitraukiate, isklausote abi puses ir padedate rasti kompromisa',
+                'Įsitraukiate, išklausote abi puses ir padedate rasti kompromisą',
             weight: 10,
           ),
           QuestionOption(
             id: 'd',
-            text: 'Perduodate situacija vadovui',
+            text: 'Perduodate situaciją vadovui',
             weight: 5,
           ),
         ],
       ),
       SoftSkillQuestion(
         question:
-            'Kaip elgiates, kai rungtyniu metu reikia greitai priimti sprendima sudetingoje situacijoje?',
+            'Kaip elgiatės, kai rungtynių metu reikia greitai priimti sprendimą sudėtingoje situacijoje?',
         options: [
           QuestionOption(
             id: 'a',
-            text: 'Vengiate sprendimo, kol kas nors kitas ji priims',
+            text: 'Vengiate sprendimo, kol kas nors kitas jį priims',
             weight: 0,
           ),
           QuestionOption(
             id: 'b',
-            text: 'Priimate sprendima impulsyviai, daug neanalizuodamas',
+            text: 'Priimate sprendimą impulsyviai, daug neanalizuodamas',
             weight: 4,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Surenkate informacija, ivertinate rizikas ir priimate atsakomybe uz sprendima',
+                'Surenkate informaciją, įvertinate rizikas ir prisiimate atsakomybę už sprendimą',
             weight: 10,
           ),
           QuestionOption(
             id: 'd',
-            text: 'Laukiate nurodymu is kitu',
+            text: 'Laukiate nurodymų iš kitų',
             weight: 2,
           ),
         ],
       ),
       SoftSkillQuestion(
         question:
-            'Kaip elgiates, kai komanda pradeda pralaimineti arba krenta motyvacija?',
+            'Kaip elgiatės, kai komanda pradeda pralaiminėti arba krenta motyvacija?',
         options: [
           QuestionOption(
             id: 'a',
-            text: 'Susitelkiate tik i savo zaidima',
+            text: 'Susitelkiate tik į savo žaidimą',
             weight: 3,
           ),
           QuestionOption(
             id: 'b',
-            text: 'Isreiskiate nepasitenkinima komandos draugais',
+            text: 'Išreiškiate nepasitenkinimą komandos draugais',
             weight: 0,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Palaikote komandos draugus, skatinate, primenate tiksla ir padedate islaikyti komandine dvasia',
+                'Palaikote komandos draugus, skatinate, primenate tikslą ir padedate išlaikyti komandinę dvasią',
             weight: 10,
           ),
           QuestionOption(
             id: 'd',
-            text: 'Laukiate, kol treneris pakels komandos motyvacija',
+            text: 'Laukiate, kol treneris pakels komandos motyvaciją',
             weight: 4,
           ),
         ],
@@ -140,94 +140,94 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
   ),
   SoftSkillQuestionCategory(
     id: 'emociju_reguliavimas',
-    title: 'Emociju reguliavimas',
-    dbSkillName: 'emociju valdymas',
+    title: 'Emocijų reguliavimas',
+    dbSkillName: 'emocijų valdymas',
     questions: [
       SoftSkillQuestion(
         question:
-            'Varzybu metu padarote apmaudzia klaida, del kurios komanda praranda pranasuma. Kokia jusu reakcija?',
+            'Varžybų metu padarote apmaudžią klaidą, dėl kurios komanda praranda pranašumą. Kokia jūsų reakcija?',
         options: [
           QuestionOption(
             id: 'a',
             text:
-                'Iskart supykstu ant saves ir visa likusi laika galvoju apie ta klaida, prarasdamas susikaupima.',
+                'Iškart supykstu ant savęs ir visą likusį laiką galvoju apie tą klaidą, prarasdamas susikaupimą.',
             weight: 2,
           ),
           QuestionOption(
             id: 'b',
             text:
-                'Garsiai isreiskiu nepasitenkinima ir ieskau pasiteisinimu arba kaltinu isorines aplinkybes (teiseja, iranga).',
+                'Garsiai išreiškiu nepasitenkinimą ir ieškau pasiteisinimų arba kaltinu išorines aplinkybes (teisėją, įrangą).',
             weight: 1,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Giliai ikvepiu, mintyse pripazistu klaida, bet samoningai nukreipiu demesi i tolimesne zaidimo eiga, neleidziu klaidai manes blaskyti.',
+                'Giliai įkvepiu, mintyse pripažįstu klaidą, bet sąmoningai nukreipiu dėmesį į tolimesnę žaidimo eigą, neleidžiu klaidai manęs blaškyti.',
             weight: 10,
           ),
           QuestionOption(
             id: 'd',
             text:
-                'Nuleidziu rankas ir nustoju stengtis, nes jauciuosi viska sugadines.',
+                'Nuleidžiu rankas ir nustoju stengtis, nes jaučiuosi viską sugadinęs.',
             weight: 0,
           ),
         ],
       ),
       SoftSkillQuestion(
         question:
-            'Treneris jums prie visu pasako griezta, bet teisinga pastaba del jusu veiksmu. Kaip su tuo susitvarkote?',
+            'Treneris jums prie visų pasako griežtą, bet teisingą pastabą dėl jūsų veiksmų. Kaip su tuo susitvarkote?',
         options: [
           QuestionOption(
             id: 'a',
             text:
-                'Iskart pradedu teisintis ir gincytis, nes jauciuosi asmeniskai puolamas.',
+                'Iškart pradedu teisintis ir ginčytis, nes jaučiuosi asmeniškai puolamas.',
             weight: 1,
           ),
           QuestionOption(
             id: 'b',
             text:
-                'Isklausau pastaba, stengiuosi atskirti savo emocijas nuo faktu ir po visko ramiai apgalvoju, ka galiu pagerinti.',
+                'Išklausau pastabą, stengiuosi atskirti savo emocijas nuo faktų ir po visko ramiai apgalvoju, ką galiu pagerinti.',
             weight: 10,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Tyliu, bet viduje jauciu dideli pykti ar geda, kas smarkiai numusa mano motyvacija dirbti toliau.',
+                'Tyliu, bet viduje jaučiu didelį pyktį ar gėdą, kas smarkiai numuša mano motyvaciją dirbti toliau.',
             weight: 3,
           ),
           QuestionOption(
             id: 'd',
-            text: 'Visiskai ignoruoju pastaba ir toliau darau viska taip pat.',
+            text: 'Visiškai ignoruoju pastabą ir toliau darau viską taip pat.',
             weight: 0,
           ),
         ],
       ),
       SoftSkillQuestion(
         question:
-            'Likus kelioms minutems iki labai svarbaus pasirodymo ar rungtyniu pradzios jauciate dideli jauduli, sirdis plaka greiciau. Kokiu veiksmu imates?',
+            'Likus kelioms minutėms iki labai svarbaus pasirodymo ar rungtynių pradžios jaučiate didelį jaudulį, širdis plaka greičiau. Kokių veiksmų imatės?',
         options: [
           QuestionOption(
             id: 'a',
             text:
-                'Pasiduodu panikai ir pradedu isivaizduoti blogiausius imanomus scenarijus.',
+                'Pasiduodu panikai ir pradedu įsivaizduoti blogiausius įmanomus scenarijus.',
             weight: 0,
           ),
           QuestionOption(
             id: 'b',
             text:
-                'Bandau uzgniauzti jausmus ir apsimesti, kad nieko nejauciu, nors kunas islieka labai isitempes.',
+                'Bandau užgniaužti jausmus ir apsimesti, kad nieko nejaučiu, nors kūnas išlieka labai įsitempęs.',
             weight: 3,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Pradedu blaskytis ir skustis kitiems, kaip smarkiai jaudinuosi, taip perkeldamas itampa ir aplinkiniams.',
+                'Pradedu blaškytis ir skųstis kitiems, kaip smarkiai jaudinuosi, taip perkeldamas įtampą ir aplinkiniams.',
             weight: 2,
           ),
           QuestionOption(
             id: 'd',
             text:
-                'Pripazistu savo jauduli kaip naturalia reakcija ir atlieku samoningo kvepavimo pratimus, kad susikaupciau.',
+                'Pripažįstu savo jaudulį kaip natūralią reakciją ir atlieku sąmoningo kvėpavimo pratimus, kad susikaupčiau.',
             weight: 10,
           ),
         ],
@@ -435,35 +435,35 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
     questions: [
       SoftSkillQuestion(
         question:
-            'Varzybu metu jusu komanda vis daro ta pacia klaida, taciau treneris nieko del to nedaro. Kokia jusu reakcija?',
+            'Varžybų metu jūsų komanda vis daro tą pačią klaidą, tačiau treneris nieko dėl to nedaro. Kokia jūsų reakcija?',
         options: [
           QuestionOption(
             id: 'a',
-            text: 'Pasiskusite savo komandos draugui pertraukos metu',
+            text: 'Pasiskųsite savo komandos draugui pertraukos metu',
             weight: 2,
           ),
           QuestionOption(
             id: 'b',
-            text: 'Lauksite, kol treneris sureaguos ir imsis veiksmu',
+            text: 'Lauksite, kol treneris sureaguos ir imsis veiksmų',
             weight: 1,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Is karto garsiai visai komandai pasakysite, kokia tai klaida ir kaip ja pataisyti',
+                'Iš karto garsiai visai komandai pasakysite, kokia tai klaida ir kaip ją pataisyti',
             weight: 6,
           ),
           QuestionOption(
             id: 'd',
             text:
-                'Ramiai ir naturaliai pertraukos metu aptariate tai su komandos nariais',
+                'Ramiai ir natūraliai pertraukos metu aptariate tai su komandos nariais',
             weight: 10,
           ),
         ],
       ),
       SoftSkillQuestion(
         question:
-            'Ką darysite, kai komandos draugas A ruosiasi svarbiam veiksmui, o komandos draugas B ruosiasi kitam lemiamam epizodui?',
+            'Ką darysite, kai komandos draugas A ruošiasi svarbiam veiksmui, o komandos draugas B ruošiasi kitam lemiamam epizodui?',
         sportSpecificQuestions: {
           SportType.krepsinis:
               'Ką darysite, kai komandos draugas A ruošiasi mesti baudos metimą, kuris galėtų išlyginti rezultatą, o komandos draugas B ruošiasi priimti kamuolį greitos atakos metu ir veržtis prie krepšio?',
@@ -487,41 +487,41 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
           QuestionOption(
             id: 'c',
             text:
-                'Garsiai raginsite ir palaikysite komandos drauga A; komandos draugui B duosite ramu technini patarima',
+                'Garsiai raginsite ir palaikysite komandos draugą A; komandos draugui B duosite ramų techninį patarimą',
             weight: 10,
           ),
           QuestionOption(
             id: 'd',
             text:
-                'Komandos draugui A duosite ramu technini patarima; garsiai raginsite ir palaikysite komandos drauga B',
+                'Komandos draugui A duosite ramų techninį patarimą; garsiai raginsite ir palaikysite komandos draugą B',
             weight: 8,
           ),
         ],
       ),
       SoftSkillQuestion(
-        question: 'Kaip reaguojate, kai padarote kritine klaida gynyboje?',
+        question: 'Kaip reaguojate, kai padarote kritinę klaidą gynyboje?',
         options: [
           QuestionOption(
             id: 'a',
-            text: 'Ranku gestais i virsu parodote savo nusivylima',
+            text: 'Rankų gestais į viršų parodote savo nusivylimą',
             weight: 2,
           ),
           QuestionOption(
             id: 'b',
             text:
-                'Nuleidziate galva ir griztate atgal i savo pozicija, kad neatkreipti daug demesio i sia klaida ir daugiau apie ja negalvoti',
+                'Nuleidžiate galvą ir grįžtate atgal į savo poziciją, kad neatkreiptumėte daug dėmesio į šią klaidą ir daugiau apie ją negalvotumėte',
             weight: 3,
           ),
           QuestionOption(
             id: 'c',
             text:
-                'Is karto ziurite i treneri, laukiate is jo paskatinimo',
+                'Iš karto žiūrite į trenerį, laukiate iš jo paskatinimo',
             weight: 4,
           ),
           QuestionOption(
             id: 'd',
             text:
-                'Laikote galva aukstai, susizvalgote su komandos nariais ir einate i savo pozicija tolimesniam zaidimui',
+                'Laikote galvą aukštai, susižvalgote su komandos nariais ir einate į savo poziciją tolimesniam žaidimui',
             weight: 10,
           ),
         ],
@@ -530,8 +530,8 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
   ),
   SoftSkillQuestionCategory(
     id: 'pasitikejimas_savimi',
-    title: 'Pasitikejimas savimi',
-    dbSkillName: 'pasitikejimas savimi',
+    title: 'Pasitikėjimas savimi',
+    dbSkillName: 'pasitikėjimas savimi',
     questions: [
       SoftSkillQuestion(
         question: 'Kaip elgiatės, kai padarote dvi klaidas iš eilės, bet matote, kad jūsų komandos draugui reikia paskatinimo?',
@@ -785,8 +785,8 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
   ),
   SoftSkillQuestionCategory(
     id: 'atsakomybe',
-    title: 'Atsakomybe',
-    dbSkillName: 'atsakomybe',
+    title: 'Atsakomybė',
+    dbSkillName: 'atsakomybė',
     questions: [
       SoftSkillQuestion(
           question: 'Kaip elgiatės, kai matote, kad komandos draugas trenerio užduoto pratimo iki galo nepadaro, pavyzdžiui vietoje 10 pakartojimų daro tik 6-7?',
@@ -867,8 +867,8 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
   ),
   SoftSkillQuestionCategory(
     id: 'sprendimu_priemimas_stresinese_situacijose',
-    title: 'Sprendimu priemimas stresinese situacijose',
-    dbSkillName: 'sprendimu priemimas stresinese situacijose',
+    title: 'Sprendimų priėmimas stresinėse situacijose',
+    dbSkillName: 'sprendimų priėmimas',
     questions: [
       SoftSkillQuestion(
           question: 'Ką darote, kai turite pasuoti kamuolį lemiamu varžybų momentu ir du komandos nariai, kurie yra skirtingose pusėse, prašo kamuolio?',

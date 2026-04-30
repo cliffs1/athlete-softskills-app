@@ -254,7 +254,7 @@ class _TestPageState extends State<TestPage> {
         final normalizedTitle = _normalizeText(entry.key);
         final skillId = normalizedSkillIds[normalizedTitle];
         if (skillId == null) {
-          debugPrint('Nerastas igudzio ID kategorijai: ${entry.key}');
+          debugPrint('Nerastas įgūdžio ID kategorijai: ${entry.key}');
           continue;
         }
 
@@ -295,13 +295,13 @@ class _TestPageState extends State<TestPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Testo rezultatai issaugoti')),
+        const SnackBar(content: Text('Testo rezultatai išsaugoti')),
       );
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Nepavyko issaugoti rezultatu: $e')),
+        SnackBar(content: Text('Nepavyko išsaugoti rezultatų: $e')),
       );
     } finally {
       if (mounted) {
@@ -387,7 +387,7 @@ class _TestPageState extends State<TestPage> {
           title: const Text('Testas'),
         ),
         body: const Center(
-          child: Text('Klausimu kol kas nera'),
+          child: Text('Klausimų kol kas nėra'),
         ),
       );
     }
