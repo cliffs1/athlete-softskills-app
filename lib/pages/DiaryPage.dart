@@ -97,11 +97,13 @@ class _DiaryPageState extends State<DiaryPage> {
           'emocijostekstas': emotionalText,
           'ai_analysis': coachResponse.analysis,
           'ai_tip': coachResponse.tomorrowTip,
+          'stats_applied': false,
         };
         for (int i = 0; i < answers.length; i++) {
           data['q${i + 1}'] = answers[i];
         }
         await supabase.from('dienorastis').insert(data);
+        await _applyDiaryStatsIfEligible(user.id);
 
         setState(() {
           completedToday = true;
@@ -145,6 +147,206 @@ class _DiaryPageState extends State<DiaryPage> {
 
   int wordCount(String text) {
     return text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
+  }
+
+  String _dateOnly(DateTime date) {
+    final localDate = DateTime(date.year, date.month, date.day);
+    return localDate.toIso8601String().split('T')[0];
+  }
+
+  String _normalizeSkillName(String value) {
+    const replacements = {
+      'ą': 'a',
+      'č': 'c',
+      'ę': 'e',
+      'ė': 'e',
+      'į': 'i',
+      'š': 's',
+      'ų': 'u',
+      'ū': 'u',
+      'ž': 'z',
+    };
+
+    var normalized = value.toLowerCase().trim();
+    replacements.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+
+    normalized = normalized.replaceAll(RegExp(r'[^a-z0-9]+'), ' ');
+    return normalized.trim();
+  }
+
+  double _scaleAnswerToScore(dynamic value) {
+    final answer = value is int ? value : int.tryParse(value?.toString() ?? '');
+    if (answer == null) return 0;
+    return (answer * 2).clamp(0, 10).toDouble();
+  }
+
+  double _yesNoAnswerToScore(dynamic value) {
+    final answer = value is int ? value : int.tryParse(value?.toString() ?? '');
+    return answer == 1 ? 10 : 4;
+  }
+
+  void _addScore(Map<String, List<double>> buckets, String skill, double score) {
+    if (score <= 0) return;
+    buckets.putIfAbsent(skill, () => []);
+    buckets[skill]!.add(score);
+  }
+
+  double _average(List<double> values) {
+    if (values.isEmpty) return 0;
+    return values.reduce((sum, value) => sum + value) / values.length;
+  }
+
+  Future<int> _getNextTableId(String tableName) async {
+    final response = await supabase
+        .from(tableName)
+        .select('id')
+        .order('id', ascending: false)
+        .limit(1);
+
+    final rows = response as List;
+    if (rows.isEmpty) return 1;
+
+    final lastId = rows.first['id'] as int?;
+    return (lastId ?? 0) + 1;
+  }
+
+  Future<void> _applyDiaryStatsIfEligible(String userId) async {
+    try {
+      final today = DateTime.now();
+      final requiredDates = [
+        _dateOnly(today),
+        _dateOnly(today.subtract(const Duration(days: 1))),
+        _dateOnly(today.subtract(const Duration(days: 2))),
+      ];
+
+      final diaryRows = await supabase
+          .from('dienorastis')
+          .select('id, entry_date, q1, q2, q3, q4, stats_applied')
+          .eq('user_id', userId)
+          .inFilter('entry_date', requiredDates);
+
+      final entriesByDate = <String, Map<String, dynamic>>{};
+      for (final row in diaryRows as List) {
+        final entry = Map<String, dynamic>.from(row);
+        final entryDate = entry['entry_date']?.toString();
+        if (entryDate != null) {
+          entriesByDate[entryDate] = entry;
+        }
+      }
+
+      if (!requiredDates.every(entriesByDate.containsKey)) return;
+
+      final entriesToApply = requiredDates.map((date) => entriesByDate[date]!);
+      if (entriesToApply.any((entry) => entry['stats_applied'] == true)) {
+        return;
+      }
+
+      final scoreBuckets = <String, List<double>>{};
+      for (final entry in entriesToApply) {
+        final practiceScore = _yesNoAnswerToScore(entry['q1']);
+        final confidenceScore = _scaleAnswerToScore(entry['q2']);
+        final communicationScore = _scaleAnswerToScore(entry['q3']);
+        final growthScore = _scaleAnswerToScore(entry['q4']);
+
+        _addScore(scoreBuckets, 'motyvacija', practiceScore);
+        _addScore(scoreBuckets, 'atsakomybė', practiceScore);
+        _addScore(scoreBuckets, 'pasitikėjimas savimi', confidenceScore);
+        _addScore(scoreBuckets, 'komunikacija', communicationScore);
+        _addScore(scoreBuckets, 'komandinis darbas', communicationScore);
+        _addScore(scoreBuckets, 'motyvacija', growthScore);
+        _addScore(scoreBuckets, 'atsakomybė', growthScore);
+      }
+
+      await _saveDiarySkillScores(userId, scoreBuckets);
+
+      final appliedEntryIds = entriesToApply
+          .map((entry) => entry['id'])
+          .whereType<int>()
+          .toList();
+      if (appliedEntryIds.isNotEmpty) {
+        await supabase
+            .from('dienorastis')
+            .update({'stats_applied': true}).inFilter('id', appliedEntryIds);
+      }
+    } catch (e) {
+      debugPrint('Nepavyko pritaikyti dienoraščio statistikai: $e');
+    }
+  }
+
+  Future<void> _saveDiarySkillScores(
+    String userId,
+    Map<String, List<double>> scoreBuckets,
+  ) async {
+    if (scoreBuckets.isEmpty) return;
+
+    final skillDefinitions = await supabase
+        .from('minkstieji_gebejimai')
+        .select('id, pavadinimas');
+
+    final currentSkillRows = await supabase
+        .from('naudotojo_minkstieji')
+        .select('id, fk_minkstieji_gebejimai, svoris')
+        .eq('fk_naudotojas', userId);
+
+    final normalizedSkillIds = <String, int>{};
+    for (final item in skillDefinitions as List) {
+      final name = item['pavadinimas']?.toString();
+      final id = item['id'] as int?;
+      if (name == null || id == null) continue;
+      normalizedSkillIds[_normalizeSkillName(name)] = id;
+    }
+
+    final currentSkillMap = <int, Map<String, dynamic>>{};
+    for (final item in currentSkillRows as List) {
+      final skillId = item['fk_minkstieji_gebejimai'] as int?;
+      if (skillId == null) continue;
+      currentSkillMap[skillId] = Map<String, dynamic>.from(item);
+    }
+
+    for (final entry in scoreBuckets.entries) {
+      final skillId = normalizedSkillIds[_normalizeSkillName(entry.key)];
+      if (skillId == null) {
+        debugPrint('Nerastas įgūdžio ID dienoraščio kategorijai: ${entry.key}');
+        continue;
+      }
+
+      final diaryScore = _average(entry.value);
+      final currentRow = currentSkillMap[skillId];
+      final previousWeight = currentRow == null
+          ? null
+          : (currentRow['svoris'] as num?)?.toDouble();
+      final newWeight = (previousWeight == null
+              ? diaryScore
+              : (previousWeight * 0.9) + (diaryScore * 0.1))
+          .clamp(0, 10)
+          .toDouble();
+
+      if (currentRow == null) {
+        final nextCurrentId = await _getNextTableId('naudotojo_minkstieji');
+        await supabase.from('naudotojo_minkstieji').insert({
+          'id': nextCurrentId,
+          'fk_naudotojas': userId,
+          'fk_minkstieji_gebejimai': skillId,
+          'svoris': newWeight,
+        });
+      } else {
+        await supabase
+            .from('naudotojo_minkstieji')
+            .update({'svoris': newWeight}).eq('id', currentRow['id']);
+      }
+
+      final nextHistoryId = await _getNextTableId(
+        'naudotojo_minkstieji_history',
+      );
+      await supabase.from('naudotojo_minkstieji_history').insert({
+        'id': nextHistoryId,
+        'fk_naudotojas': userId,
+        'fk_minkstieji_gebejimai': skillId,
+        'svoris': newWeight,
+      });
+    }
   }
 
   @override
