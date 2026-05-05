@@ -12,6 +12,7 @@ import '../widgets/CompetitionReflectionReminderWidget.dart';
 import '../widgets/BreathingWidget.dart';
 import '../dashboards/PlayerDashboard.dart';
 import '../dashboards/CoachDashboard.dart';
+import '../pages/PlayerDetailPage.dart';
 
 class PlayerListWidget extends StatefulWidget {
   const PlayerListWidget({super.key});
@@ -76,7 +77,12 @@ class _PlayerListWidgetState extends State<PlayerListWidget> {
             subtitle: Text(player['el_pastas'] ?? ''),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
-              // later → navigate to PlayerDetailPage
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PlayerDetailPage(player: player),
+                ),
+              );
             },
           ),
         );

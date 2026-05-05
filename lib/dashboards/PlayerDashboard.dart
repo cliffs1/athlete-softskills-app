@@ -11,31 +11,33 @@ import '../widgets/BreathingWidget.dart';
 
 
 class PlayerDashboard extends StatelessWidget {
-  const PlayerDashboard({super.key});
+  final String playerId;
+
+  const PlayerDashboard({super.key, required this.playerId});
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(
-        children: const [
-          SizedBox(height: 10),
-          MotivationWidget(),
-          SizedBox(height: 10),
-          DiaryReminderWidget(),
-          SizedBox(height:10),
-          CompetitionReflectionReminderWidget(),
-          SizedBox(height:10),
-          TipsWidget(),
-          SizedBox(height:10),
-          CalendarWidget(),
-          SizedBox(height:10),
-          StatisticsWidget(),
-          SizedBox(height:10),
-          DiaryWidget(),
-          SizedBox(height:10),
-          TestWidget(),
-          SizedBox(height:10),
-          BreathingWidget(),
+        children: [
+          const SizedBox(height: 10),
+          const MotivationWidget(),
+          const SizedBox(height: 10),
+          const DiaryReminderWidget(),
+          const SizedBox(height:10),
+          const CompetitionReflectionReminderWidget(),
+          const SizedBox(height:10),
+          const TipsWidget(),
+          const SizedBox(height:10),
+          const CalendarWidget(),
+          const SizedBox(height:10),
+          StatisticsWidget(playerId: playerId),
+          const SizedBox(height:10),
+          const DiaryWidget(),
+          const SizedBox(height:10),
+          const TestWidget(),
+          const SizedBox(height:10),
+          const BreathingWidget(),
         ],
       ),
     );

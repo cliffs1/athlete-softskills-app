@@ -5,7 +5,9 @@ import 'package:softskills_app/widgets/subscription_gate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Statisticspage extends StatefulWidget {
-  const Statisticspage({super.key});
+  final String playerId;
+
+  const Statisticspage({super.key, required this.playerId});
 
   @override
   State<Statisticspage> createState() => _StatisticspageState();
@@ -55,22 +57,19 @@ class _StatisticspageState extends State<Statisticspage> {
   }
 
   Future<SkillFetchResult> fetchSkills() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      return SkillFetchResult(skills: [], hasHistory: false);
-    }
+    final playerId = widget.playerId;
 
     final currentResponse = await supabase
         .from('naudotojo_minkstieji')
         .select(
       'fk_minkstieji_gebejimai, svoris, minkstieji_gebejimai(pavadinimas, kategorija)',
     )
-        .eq('fk_naudotojas', user.id);
+        .eq('fk_naudotojas', playerId);
 
     final weekAgoResponse = await supabase
         .from('naudotojo_minkstieji_history')
         .select('fk_minkstieji_gebejimai, svoris, created_at')
-        .eq('fk_naudotojas', user.id)
+        .eq('fk_naudotojas', playerId)
         .lte(
       'created_at',
       DateTime.now()

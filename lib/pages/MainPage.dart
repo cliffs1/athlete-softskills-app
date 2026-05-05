@@ -65,6 +65,7 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = supabase.auth.currentUser;
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -147,8 +148,10 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
       body: role == 'coach'
-        ? const CoachDashboard()
-        : const PlayerDashboard(),
+          ? const CoachDashboard()
+          : user == null
+          ? const Center(child: Text("Not logged in"))
+          : PlayerDashboard(playerId: user.id),
     );
   }
 }
