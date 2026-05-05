@@ -6,8 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Statisticspage extends StatefulWidget {
   final String playerId;
+  final bool showAppBar;
 
-  const Statisticspage({super.key, required this.playerId});
+  const Statisticspage({
+    super.key,
+    required this.playerId,
+    this.showAppBar = true, // default player mode
+  });
 
   @override
   State<Statisticspage> createState() => _StatisticspageState();
@@ -188,7 +193,7 @@ class _StatisticspageState extends State<Statisticspage> {
                     width: 8,
                     color: Colors.blue,
                     borderRadius: BorderRadius.circular(4),
-                 ),
+                  ),
                 ] :
                 [
                   BarChartRodData(
@@ -198,7 +203,7 @@ class _StatisticspageState extends State<Statisticspage> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ],
-              barsSpace: 4,
+                barsSpace: 4,
               );
             }),
             titlesData: FlTitlesData(
@@ -214,11 +219,11 @@ class _StatisticspageState extends State<Statisticspage> {
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Transform.rotate(
-                          angle: -0.2,
-                          child: Text(
-                            filteredSkills[value.toInt()].skill,
-                            style: const TextStyle(fontSize: 10),
-                          ),
+                        angle: -0.2,
+                        child: Text(
+                          filteredSkills[value.toInt()].skill,
+                          style: const TextStyle(fontSize: 10),
+                        ),
                       ),
                     );
                   },
@@ -481,9 +486,11 @@ class _StatisticspageState extends State<Statisticspage> {
       children: [
         Expanded(
           child: buildStatCard(
-            'Bendras pokytis',
-            hasHistoryData ? '+${getAverageAbsoluteChange().toStringAsFixed(2)}' : 'Nera istorijos',
-            hasHistoryData ? '(${getAveragePercentChange().toStringAsFixed(2)}%)' : ''
+              'Bendras pokytis',
+              hasHistoryData ? '+${getAverageAbsoluteChange().toStringAsFixed(
+                  2)}' : 'Nera istorijos',
+              hasHistoryData ? '(${getAveragePercentChange().toStringAsFixed(
+                  2)}%)' : ''
           ),
         ),
         const SizedBox(width: 12),
@@ -491,7 +498,8 @@ class _StatisticspageState extends State<Statisticspage> {
           child: buildStatCard(
               'Bendras vidurkis',
               'Dabartinis ${getCurrentAverage().toStringAsFixed(2)}',
-              hasHistoryData ? 'Prieš savaitė ${getWeekAgoAverage().toStringAsFixed(2)}' : ''
+              hasHistoryData ? 'Prieš savaitė ${getWeekAgoAverage()
+                  .toStringAsFixed(2)}' : ''
           ),
         ),
       ],
@@ -510,9 +518,10 @@ class _StatisticspageState extends State<Statisticspage> {
         return ListTile(
           title: Text(s.skill),
           trailing: Text(
-            hasHistoryData ? '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(2)} '
-                             '(${percent.toStringAsFixed(2)}%)'
-                :  'Dabartine reiksme: ${s.currentValue.toStringAsFixed(2)}',
+            hasHistoryData ? '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(
+                2)} '
+                '(${percent.toStringAsFixed(2)}%)'
+                : 'Dabartine reiksme: ${s.currentValue.toStringAsFixed(2)}',
             style: TextStyle(
               color: diff >= 0 ? Colors.green : Colors.red,
             ),
@@ -532,70 +541,75 @@ class _StatisticspageState extends State<Statisticspage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
-        title: const Text(
-          'Statistika',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 0),
-            child: Image.asset(
-              'assets/brain_logo_goodremakecolor.png',
-              height: 60,
-            ),
+  Widget _buildContent() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              buildSkillSelector(),
+              const SizedBox(height: 16),
+              buildChartToggle(),
+              const SizedBox(height: 4),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
+        ),
+        Expanded(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                buildSkillSelector(),
-                const SizedBox(height: 16),
-                buildChartToggle(),
-                const SizedBox(height: 4),
+                Row(
+                  children: hasHistoryData
+                      ? [
+                    legendItem(Colors.grey, 'Prieš savaitę'),
+                    const SizedBox(width: 10),
+                    legendItem(Colors.blue, 'Dabar'),
+                  ]
+                      : [
+                    legendItem(Colors.blue, 'Dabar'),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                showRadar ? buildRadarChart() : buildBarChart(),
+                const SizedBox(height: 10),
+                buildStatsRow(),
+                const SizedBox(height: 10),
+                buildSkillBreakdown(),
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
 
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    children: hasHistoryData ? [
-                      legendItem(Colors.grey, 'Prieš savaitę'),
-                      const SizedBox(width: 10),
-                      legendItem(Colors.blue, 'Dabar'),
-                    ] :
-                    [
-                      legendItem(Colors.blue, 'Dabar'),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-                  showRadar ? buildRadarChart() : buildBarChart(),
-
-                  const SizedBox(height: 10),
-                  buildStatsRow(),
-
-                  const SizedBox(height: 10),
-                  buildSkillBreakdown(),
-                ],
+  @override
+  Widget build(BuildContext context) {
+    if (widget.showAppBar) {
+      return Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
+          title: const Text(
+            'Statistika',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 0),
+              child: Image.asset(
+                'assets/brain_logo_goodremakecolor.png',
+                height: 60,
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+        body: _buildContent(),
+      );
+    } else {
+      return _buildContent(); // 👈 no Scaffold, no AppBar
+    }
   }
 }

@@ -36,7 +36,7 @@ class PlayerDetailPage extends StatelessWidget {
         body: TabBarView(
           children: [
             _buildOverviewTab(player),
-            Statisticspage(playerId: playerId),
+            Statisticspage(playerId: playerId, showAppBar: false),
             const Center(child: Text("Coming soon")),
           ],
         ),
