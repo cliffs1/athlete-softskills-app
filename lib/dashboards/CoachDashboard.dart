@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../pages/CoachMessagesPage.dart';
 import '../widgets/PlayerListWidget.dart';
-import 'package:softskills_app/widgets/CalendarWidget.dart';
-import 'package:softskills_app/widgets/StatisticsWidget.dart';
-import 'package:softskills_app/widgets/TestWidget.dart';
-import '../widgets/TipsWidget.dart';
-import '../widgets/MotivationWidget.dart';
-import '../widgets/DiaryWidget.dart';
-import '../widgets/DiaryReminderWidget.dart';
-import '../widgets/CompetitionReflectionReminderWidget.dart';
-import '../widgets/BreathingWidget.dart';
 
 class CoachDashboard extends StatelessWidget {
   const CoachDashboard({super.key});
@@ -17,19 +10,34 @@ class CoachDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
-        children: const [
-          SizedBox(height: 20),
-
-          Text(
-            "Mano žaidėjai",
+        children: [
+          const SizedBox(height: 20),
+          const Text(
+            'Mano žaidėjai',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
-
-          SizedBox(height: 10),
-
-          PlayerListWidget(),
-
-          SizedBox(height: 20),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CoachMessagesPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.message_outlined),
+                label: const Text('Siųsti žinutę'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const PlayerListWidget(),
+          const SizedBox(height: 20),
         ],
       ),
     );
