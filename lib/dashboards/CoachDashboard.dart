@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
 import '../pages/CoachMessagesPage.dart';
 import '../widgets/PlayerListWidget.dart';
+import '../pages/InvitePlayerPage.dart';
 
 class CoachDashboard extends StatelessWidget {
   const CoachDashboard({super.key});
@@ -32,6 +32,25 @@ class CoachDashboard extends StatelessWidget {
                 },
                 icon: const Icon(Icons.message_outlined),
                 label: const Text('Siųsti žinutę'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InvitePlayerPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.person_add),
+                label: const Text('Pakviesti žaidėją'),
               ),
             ),
           ),
