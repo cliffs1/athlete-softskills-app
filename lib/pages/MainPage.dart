@@ -151,7 +151,7 @@ class _MainPageState extends State<MainPage> {
           ? const CoachDashboard()
           : user == null
           ? const Center(child: Text("Not logged in"))
-          : PlayerDashboard(playerId: user.id),
+          : PlayerDashboard(playerId: user.id, showMotivation: showMotivation),
     );
   }
 }
