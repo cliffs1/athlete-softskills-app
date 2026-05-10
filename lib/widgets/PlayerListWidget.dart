@@ -41,7 +41,8 @@ class _PlayerListWidgetState extends State<PlayerListWidget> {
       final data = await supabase
           .from('naudotojas')
           .select()
-          .eq('coach_id', user.id);
+          .eq('coach_id', user.id)
+          .order('vardas', ascending: true);
 
       setState(() {
         players = data;

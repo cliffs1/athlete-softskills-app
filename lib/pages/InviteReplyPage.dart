@@ -32,13 +32,42 @@ class _InviteReplyPageState extends State<InviteReplyPage> {
     });
   }
 
-  Future<void> updateInvite(String id, String status) async {
-    await supabase
-        .from('kvietimai')
-        .update({'status': status})
-        .eq('id', id);
+  Future<void> updateInvite(Map invite, String status) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
 
-    fetchInvites();
+    try {
+      await supabase
+          .from('kvietimai')
+          .update({'status': status})
+          .eq('id', invite['id']);
+
+      if (status == 'accepted') {
+        await supabase
+            .from('naudotojas')
+            .update({'coach_id': invite['coach_id']})
+            .eq('auth_user_id', user.id);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status == 'accepted'
+                ? "Prisijungėte prie komandos!"
+                : "Pakvietimas atmestas",
+          ),
+          backgroundColor:
+          status == 'accepted' ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      fetchInvites();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Klaida: $e")),
+      );
+    }
   }
 
   @override
@@ -77,11 +106,11 @@ class _InviteReplyPageState extends State<InviteReplyPage> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.check, color: Colors.green),
-                    onPressed: () => updateInvite(invite['id'], 'accepted'),
+                    onPressed: () => updateInvite(invite, 'accepted'),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: () => updateInvite(invite['id'], 'rejected'),
+                    onPressed: () => updateInvite(invite, 'rejected'),
                   ),
                 ],
               ),
