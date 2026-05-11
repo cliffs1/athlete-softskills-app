@@ -9,6 +9,7 @@ import '../widgets/DiaryReminderWidget.dart';
 import '../widgets/CompetitionReflectionReminderWidget.dart';
 import '../widgets/BreathingWidget.dart';
 import '../widgets/InviteReminderWidget.dart';
+import '../widgets/CoachMessageNotificationWidget.dart';
 
 
 class PlayerDashboard extends StatelessWidget {
@@ -30,6 +31,8 @@ class PlayerDashboard extends StatelessWidget {
             ],
             const SizedBox(height: 10),
             const DiaryReminderWidget(),
+            const SizedBox(height: 10),
+            const CoachMessageNotificationWidget(),
             const SizedBox(height: 10),
             const InviteReminderWidget(),
             const SizedBox(height: 10),
