@@ -7,16 +7,38 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class Statisticspage extends StatefulWidget {
   final String playerId;
   final bool showAppBar;
+  final String? sport;
 
   const Statisticspage({
     super.key,
     required this.playerId,
-    this.showAppBar = true, // default player mode
+    this.showAppBar = true,
+    this.sport,
   });
 
   @override
   State<Statisticspage> createState() => _StatisticspageState();
 }
+
+const Map<String, Map<String, String>> kImportantSkills = {
+  'Tinklinis': {
+    'Socialiniai': 'Komandinis darbas', // Komandinis darbas, Komunikacija, Lyderystė
+    'Emociniai': 'Atsakomybė', // Emocijų valdymas, Streso valdymas, Pasitikėjimas savimi, Atsakomybė
+    'Kognityviniai': 'Koncentracija', // Koncentracija, Motyvacija, Sprendimų priėmimas
+  },
+  'Krepšinis': {
+    'Socialiniai': 'Komunikacija',
+    'Emociniai': 'Emocijų valdymas',
+    'Kognityviniai': 'Sprendimų priėmimas',
+  },
+  'Futbolas': {
+    'Socialiniai': 'Lyderystė',
+    'Emociniai': 'Pasitikėjimas savimi',
+    'Kognityviniai': 'Motyvacija',
+  },
+};
+
+const Color kImportantColor = Color(0xFFFF9800); // orange
 
 class SkillData {
   final String skill;
@@ -31,10 +53,7 @@ class SkillFetchResult {
   final List<SkillData> skills;
   final bool hasHistory;
 
-  SkillFetchResult({
-    required this.skills,
-    required this.hasHistory,
-  });
+  SkillFetchResult({required this.skills, required this.hasHistory});
 }
 
 class _StatisticspageState extends State<Statisticspage> {
@@ -45,6 +64,11 @@ class _StatisticspageState extends State<Statisticspage> {
   String selectedCategory = 'Socialiniai';
   bool hasHistoryData = false;
 
+  String? get _importantSkill =>
+      widget.sport == null ? null : kImportantSkills[widget.sport]?[selectedCategory];
+
+  bool _isImportant(String skillName) => skillName == _importantSkill;
+
   @override
   void initState() {
     super.initState();
@@ -53,7 +77,6 @@ class _StatisticspageState extends State<Statisticspage> {
 
   Future<void> loadSkills() async {
     final result = await fetchSkills();
-
     setState(() {
       skills = result.skills;
       hasHistoryData = result.hasHistory;
@@ -66,9 +89,7 @@ class _StatisticspageState extends State<Statisticspage> {
 
     final currentResponse = await supabase
         .from('naudotojo_minkstieji')
-        .select(
-      'fk_minkstieji_gebejimai, svoris, minkstieji_gebejimai(pavadinimas, kategorija)',
-    )
+        .select('fk_minkstieji_gebejimai, svoris, minkstieji_gebejimai(pavadinimas, kategorija)')
         .eq('fk_naudotojas', playerId);
 
     final weekAgoResponse = await supabase
@@ -77,30 +98,22 @@ class _StatisticspageState extends State<Statisticspage> {
         .eq('fk_naudotojas', playerId)
         .lte(
       'created_at',
-      DateTime.now()
-          .subtract(const Duration(days: 7))
-          .toIso8601String(),
+      DateTime.now().subtract(const Duration(days: 7)).toIso8601String(),
     )
         .order('created_at', ascending: false);
 
     final currentData = currentResponse as List;
     final weekAgoData = weekAgoResponse as List;
-
     final hasHistory = weekAgoData.isNotEmpty;
 
     final Map<int, double> weekAgoMap = {};
     for (var item in weekAgoData) {
       final skillId = item['fk_minkstieji_gebejimai'];
-
-      weekAgoMap.putIfAbsent(
-        skillId,
-            () => (item['svoris'] as num).toDouble(),
-      );
+      weekAgoMap.putIfAbsent(skillId, () => (item['svoris'] as num).toDouble());
     }
 
-    final skills = currentData.map((item) {
+    final fetchedSkills = currentData.map((item) {
       final skillId = item['fk_minkstieji_gebejimai'];
-
       return SkillData(
         item['minkstieji_gebejimai']['pavadinimas'],
         (item['svoris'] as num).toDouble(),
@@ -109,15 +122,11 @@ class _StatisticspageState extends State<Statisticspage> {
       );
     }).toList();
 
-    return SkillFetchResult(
-      skills: skills,
-      hasHistory: hasHistory,
-    );
+    return SkillFetchResult(skills: fetchedSkills, hasHistory: hasHistory);
   }
 
-  List<SkillData> get filteredSkills {
-    return skills.where((s) => s.category == selectedCategory).toList();
-  }
+  List<SkillData> get filteredSkills =>
+      skills.where((s) => s.category == selectedCategory).toList();
 
   Widget buildRadarChart() {
     if (loading || filteredSkills.isEmpty) {
@@ -126,6 +135,10 @@ class _StatisticspageState extends State<Statisticspage> {
         child: Center(child: CircularProgressIndicator()),
       );
     }
+
+    final features = filteredSkills.map((e) {
+      return _isImportant(e.skill) ? '★ ${e.skill}' : e.skill;
+    }).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -137,21 +150,18 @@ class _StatisticspageState extends State<Statisticspage> {
         height: 250,
         child: radar.RadarChart(
           ticks: const [2, 4, 6, 8, 10],
-          features: filteredSkills.map((e) => e.skill).toList(),
-          data: hasHistoryData ? [
+          features: features,
+          data: hasHistoryData
+              ? [
             filteredSkills.map((e) => e.weekAgoValue).toList(),
             filteredSkills.map((e) => e.currentValue).toList(),
-          ] :
-          [
+          ]
+              : [
             filteredSkills.map((e) => e.currentValue).toList(),
           ],
-          graphColors: hasHistoryData ? const [
-            Colors.grey,
-            Colors.blue,
-          ] :
-          [
-            Colors.blue,
-          ],
+          graphColors: hasHistoryData
+              ? const [Colors.grey, Colors.blue]
+              : const [Colors.blue],
           outlineColor: Colors.grey,
         ),
       ),
@@ -179,9 +189,13 @@ class _StatisticspageState extends State<Statisticspage> {
             maxY: 10,
             barGroups: List.generate(filteredSkills.length, (index) {
               final skill = filteredSkills[index];
+              final important = _isImportant(skill.skill);
+              final currentBarColor = important ? kImportantColor : Colors.blue;
+
               return BarChartGroupData(
                 x: index,
-                barRods: hasHistoryData ? [
+                barRods: hasHistoryData
+                    ? [
                   BarChartRodData(
                     toY: skill.weekAgoValue,
                     width: 8,
@@ -191,15 +205,15 @@ class _StatisticspageState extends State<Statisticspage> {
                   BarChartRodData(
                     toY: skill.currentValue,
                     width: 8,
-                    color: Colors.blue,
+                    color: currentBarColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                ] :
-                [
+                ]
+                    : [
                   BarChartRodData(
                     toY: skill.currentValue,
                     width: 8,
-                    color: Colors.blue,
+                    color: currentBarColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ],
@@ -211,18 +225,23 @@ class _StatisticspageState extends State<Statisticspage> {
                 sideTitles: SideTitles(
                   showTitles: true,
                   getTitlesWidget: (value, meta) {
-                    if (value.toInt() < 0 ||
-                        value.toInt() >= filteredSkills.length) {
+                    final i = value.toInt();
+                    if (i < 0 || i >= filteredSkills.length) {
                       return const SizedBox();
                     }
-
+                    final skill = filteredSkills[i];
+                    final important = _isImportant(skill.skill);
                     return Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Transform.rotate(
                         angle: -0.2,
                         child: Text(
-                          filteredSkills[value.toInt()].skill,
-                          style: const TextStyle(fontSize: 10),
+                          skill.skill,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: important ? kImportantColor : null,
+                            fontWeight: important ? FontWeight.bold : null,
+                          ),
                         ),
                       ),
                     );
@@ -245,16 +264,39 @@ class _StatisticspageState extends State<Statisticspage> {
     );
   }
 
+  Widget legendItem(Color color, String text, {bool bold = false}) {
+    return Row(
+      children: [
+        Container(width: 12, height: 12, color: color),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(fontWeight: bold ? FontWeight.bold : null),
+        ),
+      ],
+    );
+  }
+
+  Widget buildLegend() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 6,
+      children: [
+        if (hasHistoryData) legendItem(Colors.grey, 'Prieš savaitę'),
+        legendItem(Colors.blue, 'Dabar'),
+        if (_importantSkill != null)
+          legendItem(kImportantColor, 'Svarbus įgūdis: $_importantSkill',
+              bold: true),
+      ],
+    );
+  }
+
   Widget buildChartToggle() {
     return Row(
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: () {
-              setState(() {
-                showRadar = true;
-              });
-            },
+            onPressed: () => setState(() => showRadar = true),
             style: ElevatedButton.styleFrom(
               backgroundColor: showRadar
                   ? const Color.fromRGBO(79, 97, 127, 1)
@@ -270,11 +312,7 @@ class _StatisticspageState extends State<Statisticspage> {
         Expanded(
           child: SubscriptionGate(
             child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  showRadar = false;
-                });
-              },
+              onPressed: () => setState(() => showRadar = false),
               style: ElevatedButton.styleFrom(
                 backgroundColor: !showRadar
                     ? const Color.fromRGBO(79, 97, 127, 1)
@@ -288,9 +326,7 @@ class _StatisticspageState extends State<Statisticspage> {
             ),
             fallback: ElevatedButton(
               onPressed: null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[300],
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[300]),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -317,22 +353,15 @@ class _StatisticspageState extends State<Statisticspage> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          buildCategoryButton(
-            label: 'Socialiniai',
-            category: 'Socialiniai',
-          ),
+          buildCategoryButton(label: 'Socialiniai', category: 'Socialiniai'),
           SubscriptionGate(
             child: buildCategoryButton(
-              label: 'Emociniai',
-              category: 'Emociniai',
-            ),
+                label: 'Emociniai', category: 'Emociniai'),
             fallback: buildLockedCategoryButton('Emociniai'),
           ),
           SubscriptionGate(
             child: buildCategoryButton(
-              label: 'Kognityviniai',
-              category: 'Kognityviniai',
-            ),
+                label: 'Kognityviniai', category: 'Kognityviniai'),
             fallback: buildLockedCategoryButton('Kognityviniai'),
           ),
         ],
@@ -340,27 +369,18 @@ class _StatisticspageState extends State<Statisticspage> {
     );
   }
 
-  Widget buildCategoryButton({
-    required String label,
-    required String category,
-  }) {
+  Widget buildCategoryButton(
+      {required String label, required String category}) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ElevatedButton(
-        onPressed: () {
-          setState(() {
-            selectedCategory = category;
-          });
-        },
+        onPressed: () => setState(() => selectedCategory = category),
         style: ElevatedButton.styleFrom(
           backgroundColor: selectedCategory == category
               ? const Color.fromRGBO(79, 97, 127, 1)
               : Colors.grey[300],
         ),
-        child: Text(
-          label,
-          style: const TextStyle(color: Colors.white),
-        ),
+        child: Text(label, style: const TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -370,9 +390,8 @@ class _StatisticspageState extends State<Statisticspage> {
       padding: const EdgeInsets.only(right: 8),
       child: ElevatedButton(
         onPressed: null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey[300],
-        ),
+        style:
+        ElevatedButton.styleFrom(backgroundColor: Colors.grey[300]),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -391,35 +410,21 @@ class _StatisticspageState extends State<Statisticspage> {
       decoration: BoxDecoration(
         color: const Color.fromRGBO(229, 231, 235, 1),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-          ),
-        ],
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
       ),
       child: Column(
         children: [
-          Text(
-            title,
-            style: const TextStyle(color: Color.fromRGBO(11, 18, 32, 1)),
-          ),
+          Text(title,
+              style:
+              const TextStyle(color: Color.fromRGBO(11, 18, 32, 1))),
           const SizedBox(height: 4),
-          Text(
-            value1,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(value1,
+              style: const TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(
-            value2,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(value2,
+              style: const TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -427,14 +432,9 @@ class _StatisticspageState extends State<Statisticspage> {
 
   double getAverageAbsoluteChange() {
     if (filteredSkills.isEmpty) return 0;
-
-    double total = 0;
-
-    for (final s in filteredSkills) {
-      total += (s.currentValue - s.weekAgoValue);
-    }
-
-    return total / filteredSkills.length;
+    return filteredSkills.fold(
+        0.0, (sum, s) => sum + (s.currentValue - s.weekAgoValue)) /
+        filteredSkills.length;
   }
 
   double calculatePercentChange(double current, double previous) {
@@ -444,41 +444,23 @@ class _StatisticspageState extends State<Statisticspage> {
 
   double getAveragePercentChange() {
     if (filteredSkills.isEmpty) return 0;
-
-    double totalChange = 0;
-
-    for (final skill in filteredSkills) {
-      totalChange += calculatePercentChange(
-        skill.currentValue,
-        skill.weekAgoValue,
-      );
-    }
-
-    return totalChange / filteredSkills.length;
+    return filteredSkills.fold(
+        0.0,
+            (sum, s) =>
+        sum + calculatePercentChange(s.currentValue, s.weekAgoValue)) /
+        filteredSkills.length;
   }
 
   double getCurrentAverage() {
     if (filteredSkills.isEmpty) return 0;
-
-    double total = 0;
-
-    for (final s in filteredSkills) {
-      total += s.currentValue;
-    }
-
-    return total / filteredSkills.length;
+    return filteredSkills.fold(0.0, (sum, s) => sum + s.currentValue) /
+        filteredSkills.length;
   }
 
   double getWeekAgoAverage() {
     if (filteredSkills.isEmpty) return 0;
-
-    double total = 0;
-
-    for (final s in filteredSkills) {
-      total += s.weekAgoValue;
-    }
-
-    return total / filteredSkills.length;
+    return filteredSkills.fold(0.0, (sum, s) => sum + s.weekAgoValue) /
+        filteredSkills.length;
   }
 
   Widget buildStatsRow() {
@@ -486,20 +468,23 @@ class _StatisticspageState extends State<Statisticspage> {
       children: [
         Expanded(
           child: buildStatCard(
-              'Bendras pokytis',
-              hasHistoryData ? '+${getAverageAbsoluteChange().toStringAsFixed(
-                  2)}' : 'Nera istorijos',
-              hasHistoryData ? '(${getAveragePercentChange().toStringAsFixed(
-                  2)}%)' : ''
+            'Bendras pokytis',
+            hasHistoryData
+                ? '+${getAverageAbsoluteChange().toStringAsFixed(2)}'
+                : 'Nėra istorijos',
+            hasHistoryData
+                ? '(${getAveragePercentChange().toStringAsFixed(2)}%)'
+                : '',
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: buildStatCard(
-              'Bendras vidurkis',
-              'Dabartinis ${getCurrentAverage().toStringAsFixed(2)}',
-              hasHistoryData ? 'Prieš savaitė ${getWeekAgoAverage()
-                  .toStringAsFixed(2)}' : ''
+            'Bendras vidurkis',
+            'Dabartinis ${getCurrentAverage().toStringAsFixed(2)}',
+            hasHistoryData
+                ? 'Prieš savaitė ${getWeekAgoAverage().toStringAsFixed(2)}'
+                : '',
           ),
         ),
       ],
@@ -510,34 +495,44 @@ class _StatisticspageState extends State<Statisticspage> {
     return Column(
       children: filteredSkills.map((s) {
         final diff = s.currentValue - s.weekAgoValue;
-
-        final percent = s.weekAgoValue == 0
-            ? 0
-            : (diff / s.weekAgoValue) * 100;
+        final percent =
+        s.weekAgoValue == 0 ? 0 : (diff / s.weekAgoValue) * 100;
+        final important = _isImportant(s.skill);
 
         return ListTile(
-          title: Text(s.skill),
+          title: Row(
+            children: [
+              if (important) ...[
+                const Icon(Icons.star, color: kImportantColor, size: 16),
+                const SizedBox(width: 4),
+              ],
+              Flexible(
+                child: Text(
+                  s.skill,
+                  style: TextStyle(
+                    color: important ? kImportantColor : null,
+                    fontWeight:
+                    important ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ],
+          ),
           trailing: Text(
-            hasHistoryData ? '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(
-                2)} '
+            hasHistoryData
+                ? '${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(2)} '
                 '(${percent.toStringAsFixed(2)}%)'
-                : 'Dabartine reiksme: ${s.currentValue.toStringAsFixed(2)}',
+                : 'Dabartinė reikšmė: ${s.currentValue.toStringAsFixed(2)}',
             style: TextStyle(
-              color: diff >= 0 ? Colors.green : Colors.red,
+              color: important
+                  ? kImportantColor
+                  : (diff >= 0 ? Colors.green : Colors.red),
+              fontWeight:
+              important ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         );
       }).toList(),
-    );
-  }
-
-  Widget legendItem(Color color, String text) {
-    return Row(
-      children: [
-        Container(width: 12, height: 12, color: color),
-        const SizedBox(width: 6),
-        Text(text),
-      ],
     );
   }
 
@@ -559,18 +554,9 @@ class _StatisticspageState extends State<Statisticspage> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: hasHistoryData
-                      ? [
-                    legendItem(Colors.grey, 'Prieš savaitę'),
-                    const SizedBox(width: 10),
-                    legendItem(Colors.blue, 'Dabar'),
-                  ]
-                      : [
-                    legendItem(Colors.blue, 'Dabar'),
-                  ],
-                ),
+                buildLegend(),
                 const SizedBox(height: 10),
                 showRadar ? buildRadarChart() : buildBarChart(),
                 const SizedBox(height: 10),
@@ -609,7 +595,7 @@ class _StatisticspageState extends State<Statisticspage> {
         body: _buildContent(),
       );
     } else {
-      return _buildContent(); // 👈 no Scaffold, no AppBar
+      return _buildContent();
     }
   }
 }

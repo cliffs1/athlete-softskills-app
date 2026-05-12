@@ -15,8 +15,9 @@ import '../widgets/CoachMessageNotificationWidget.dart';
 class PlayerDashboard extends StatelessWidget {
   final String playerId;
   final bool showMotivation;
+  final String sport;
 
-  const PlayerDashboard({super.key, required this.playerId, required this.showMotivation});
+  const PlayerDashboard({super.key, required this.playerId, required this.showMotivation, required this.sport});
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +43,7 @@ class PlayerDashboard extends StatelessWidget {
             const SizedBox(height: 10),
             const CalendarWidget(),
             const SizedBox(height: 10),
-            StatisticsWidget(playerId: playerId),
+            StatisticsWidget(playerId: playerId, sport: sport),
             const SizedBox(height: 10),
             const DiaryWidget(),
             const SizedBox(height: 10),

@@ -25,6 +25,7 @@ class _MainPageState extends State<MainPage> {
   final supabase = Supabase.instance.client;
   bool showMotivation = true;
   String role = 'player';
+  String sport = '';
 
   @override
   void initState() {
@@ -53,16 +54,16 @@ class _MainPageState extends State<MainPage> {
 
     final data = await supabase
         .from('naudotojas')
-        .select('show_motivation, role')
+        .select('show_motivation, role, sporto_saka(pavadinimas)')
         .eq('auth_user_id', user.id)
         .single();
 
     setState(() {
       showMotivation = data['show_motivation'] ?? true;
       role = data['role'] ?? 'player';
+      sport = data['sporto_saka']?['pavadinimas'] as String? ?? '';
     });
   }
-
   @override
   Widget build(BuildContext context) {
     final user = supabase.auth.currentUser;
@@ -151,7 +152,7 @@ class _MainPageState extends State<MainPage> {
           ? const CoachDashboard()
           : user == null
           ? const Center(child: Text("Not logged in"))
-          : PlayerDashboard(playerId: user.id, showMotivation: showMotivation),
+          : PlayerDashboard(playerId: user.id, showMotivation: showMotivation, sport: sport),
     );
   }
 }

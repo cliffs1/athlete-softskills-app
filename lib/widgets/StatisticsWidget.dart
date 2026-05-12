@@ -3,8 +3,9 @@ import 'package:softskills_app/pages/StatisticsPage.dart';
 
 class StatisticsWidget extends StatelessWidget {
   final String playerId;
+  final String sport;
 
-  const StatisticsWidget({super.key, required this.playerId});
+  const StatisticsWidget({super.key, required this.playerId, required this.sport});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +17,7 @@ class StatisticsWidget extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => Statisticspage(playerId: playerId),
+            builder: (context) => Statisticspage(playerId: playerId, sport: sport),
           ),
         );
       },
