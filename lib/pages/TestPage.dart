@@ -55,7 +55,7 @@ class _TestPageState extends State<TestPage> {
     final sportType = await _loadUserSportType();
     final questions = softSkillQuestionCategories
         .expand(
-          (category) => category.questions.map(
+          (category) => category.questions.where((question) => question.isForSport(sportType)).map(
             (question) => TestQuestionEntry(
               categoryId: category.id,
               categoryTitle: category.title,

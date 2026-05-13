@@ -12,17 +12,38 @@ class DiaryPage extends StatefulWidget {
 class _DiaryPageState extends State<DiaryPage> {
   final supabase = Supabase.instance.client;
   bool? completedToday;
-  final int totalQuestions = 5;
-  final List<int?> answers = List<int?>.filled(4, null);
+  final int totalQuestions = 3;
+  final List<int?> answers = List<int?>.filled(3, null);
   String emotionalText = "";
   late final PageController _pageController;
   int currentQuestion = 0;
-  final TextEditingController _textController = TextEditingController();
   List<String> questions = [
-    "Ar šiandien bandei pritaikyti naujai išmoktas žinias?",
-    "Kaip vertini savo pasitikėjimą savimi šiandien?",
-    "Kaip gerai bendravai su komandos nariais?",
-    "Kaip vertini savo tobulėjimą?",
+    "Kaip šiandien jautėtės fiziškai ir emociškai?",
+    "Ar šiandien bandėte pritaikyti minkštuosius įgūdžius?",
+    "Kaip šiandien vertinate savo bendravimą ir atmosferą komandoje?",
+  ];
+  final List<List<String>> answerOptions = [
+    [
+      "Labai prastai",
+      "Prastai",
+      "Vidutiniškai",
+      "Gerai",
+      "Puikiai",
+    ],
+    [
+      "Ne, visiškai nebandžiau",
+      "Bandžiau labai mažai",
+      "Kartais stengiausi pritaikyti",
+      "Dažnai taikiau praktikoje",
+      "Nuolat sąmoningai taikiau",
+    ],
+    [
+      "Atmosfera buvo labai bloga",
+      "Buvo nemažai įtampos",
+      "Neutralu",
+      "Atmosfera buvo gera",
+      "Komandoje vyravo labai geras palaikymas ir bendravimas",
+    ],
   ];
 
   @override
@@ -35,7 +56,6 @@ class _DiaryPageState extends State<DiaryPage> {
   @override
   void dispose() {
     _pageController.dispose();
-    _textController.dispose();
     super.dispose();
   }
 
@@ -62,6 +82,7 @@ class _DiaryPageState extends State<DiaryPage> {
     } else {
       final user = supabase.auth.currentUser;
       if (user == null) return;
+      emotionalText = _buildDiarySummary();
 
       showDialog(
         context: context,
@@ -138,15 +159,18 @@ class _DiaryPageState extends State<DiaryPage> {
   }
 
   bool canProceed(int index) {
-    if (index < 4) {
-      return answers[index] != null;
-    } else {
-      return emotionalText.trim().isNotEmpty;
-    }
+    return answers[index] != null;
   }
 
-  int wordCount(String text) {
-    return text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
+  String _buildDiarySummary() {
+    final lines = <String>[];
+    for (int i = 0; i < answers.length; i++) {
+      final answer = answers[i];
+      if (answer == null) continue;
+      final optionText = answerOptions[i][answer - 1];
+      lines.add('${questions[i]} $optionText');
+    }
+    return lines.join('\n');
   }
 
   String _dateOnly(DateTime date) {
@@ -179,12 +203,7 @@ class _DiaryPageState extends State<DiaryPage> {
   double _scaleAnswerToScore(dynamic value) {
     final answer = value is int ? value : int.tryParse(value?.toString() ?? '');
     if (answer == null) return 0;
-    return (answer * 2).clamp(0, 10).toDouble();
-  }
-
-  double _yesNoAnswerToScore(dynamic value) {
-    final answer = value is int ? value : int.tryParse(value?.toString() ?? '');
-    return answer == 1 ? 10 : 4;
+    return ((answer - 1) * 2.5).clamp(0, 10).toDouble();
   }
 
   void _addScore(Map<String, List<double>> buckets, String skill, double score) {
@@ -223,7 +242,7 @@ class _DiaryPageState extends State<DiaryPage> {
 
       final diaryRows = await supabase
           .from('dienorastis')
-          .select('id, entry_date, q1, q2, q3, q4, stats_applied')
+          .select('id, entry_date, q1, q2, q3, stats_applied')
           .eq('user_id', userId)
           .inFilter('entry_date', requiredDates);
 
@@ -242,21 +261,30 @@ class _DiaryPageState extends State<DiaryPage> {
       if (entriesToApply.any((entry) => entry['stats_applied'] == true)) {
         return;
       }
+      if (entriesToApply.any(
+        (entry) =>
+            entry['q1'] == null ||
+            entry['q2'] == null ||
+            entry['q3'] == null,
+      )) {
+        return;
+      }
 
       final scoreBuckets = <String, List<double>>{};
       for (final entry in entriesToApply) {
-        final practiceScore = _yesNoAnswerToScore(entry['q1']);
-        final confidenceScore = _scaleAnswerToScore(entry['q2']);
+        final wellbeingScore = _scaleAnswerToScore(entry['q1']);
+        final softSkillsPracticeScore = _scaleAnswerToScore(entry['q2']);
         final communicationScore = _scaleAnswerToScore(entry['q3']);
-        final growthScore = _scaleAnswerToScore(entry['q4']);
 
-        _addScore(scoreBuckets, 'motyvacija', practiceScore);
-        _addScore(scoreBuckets, 'atsakomybė', practiceScore);
-        _addScore(scoreBuckets, 'pasitikėjimas savimi', confidenceScore);
+        _addScore(scoreBuckets, 'emocijų valdymas', wellbeingScore);
+        _addScore(scoreBuckets, 'streso valdymas', wellbeingScore);
+        _addScore(scoreBuckets, 'pasitikėjimas savimi', wellbeingScore);
+        _addScore(scoreBuckets, 'motyvacija', softSkillsPracticeScore);
+        _addScore(scoreBuckets, 'atsakomybė', softSkillsPracticeScore);
+        _addScore(scoreBuckets, 'koncentracija', softSkillsPracticeScore);
         _addScore(scoreBuckets, 'komunikacija', communicationScore);
         _addScore(scoreBuckets, 'komandinis darbas', communicationScore);
-        _addScore(scoreBuckets, 'motyvacija', growthScore);
-        _addScore(scoreBuckets, 'atsakomybė', growthScore);
+        _addScore(scoreBuckets, 'lyderystė', communicationScore);
       }
 
       await _saveDiarySkillScores(userId, scoreBuckets);
@@ -416,9 +444,7 @@ class _DiaryPageState extends State<DiaryPage> {
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(24),
-                                child: index < 4
-                                    ? buildScaleQuestion(index)
-                                    : buildTextQuestion(),
+                                child: buildScaleQuestion(index),
                               ),
                             ),
                           );
@@ -431,8 +457,6 @@ class _DiaryPageState extends State<DiaryPage> {
   }
 
   Widget buildScaleQuestion(int index) {
-    if (index == 0) return buildYesNoQuestion(index);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -441,117 +465,41 @@ class _DiaryPageState extends State<DiaryPage> {
         const SizedBox(height: 12),
         Text(questions[index], style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 32),
-        Wrap(
-          spacing: 12,
-          children: List.generate(5, (i) {
-            final value = i + 1;
-            final selected = answers[index] == value;
-            return GestureDetector(
-              onTap: () => setState(() => answers[index] = value),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 56,
-                height: 56,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: selected
-                      ? const Color.fromRGBO(56, 189, 248, 1)
-                      : Colors.grey.shade200,
-                ),
-                child: Text(
-                  value.toString(),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: selected ? Colors.white : Colors.black87,
+        Expanded(
+          child: ListView.separated(
+            itemCount: answerOptions[index].length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, optionIndex) {
+              final value = optionIndex + 1;
+              final selected = answers[index] == value;
+              return GestureDetector(
+                onTap: () => setState(() => answers[index] = value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: selected
+                        ? const Color.fromRGBO(56, 189, 248, 1)
+                        : Colors.grey.shade200,
+                  ),
+                  child: Text(
+                    answerOptions[index][optionIndex],
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? Colors.white : Colors.black87,
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
-        ),
-        const Spacer(),
-        navigationButtons(index),
-      ],
-    );
-  }
-
-  Widget buildYesNoQuestion(int index) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Klausimas ${index + 1}',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        Text(questions[index], style: const TextStyle(fontSize: 18)),
-        const SizedBox(height: 32),
-        Row(children: [
-          Expanded(child: yesNoButton(index, 1, "Taip")),
-          const SizedBox(width: 12),
-          Expanded(child: yesNoButton(index, 0, "Ne")),
-        ]),
-        const Spacer(),
-        navigationButtons(index),
-      ],
-    );
-  }
-
-  Widget yesNoButton(int index, int value, String text) {
-    final selected = answers[index] == value;
-    return GestureDetector(
-      onTap: () => setState(() => answers[index] = value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 60,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: selected
-              ? const Color.fromRGBO(56, 189, 248, 1)
-              : Colors.grey.shade200,
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: selected ? Colors.white : Colors.black87,
+              );
+            },
           ),
         ),
-      ),
-    );
-  }
-
-  Widget buildTextQuestion() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Kaip bendrai jautiesi šiandien? (savo žodžiais)',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _textController,
-          maxLines: 6,
-          onChanged: (value) {
-            if (wordCount(value) <= 200) {
-              setState(() => emotionalText = value);
-            }
-          },
-          decoration: const InputDecoration(
-            hintText: 'Parašyk iki 200 žodžių...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Žodžiai: ${wordCount(_textController.text)} / 200',
-          style: const TextStyle(color: Colors.grey),
-        ),
-        const Spacer(),
-        navigationButtons(4),
+        navigationButtons(index),
       ],
     );
   }
