@@ -53,18 +53,7 @@ class _TestPageState extends State<TestPage> {
 
   Future<void> loadTestData() async {
     final sportType = await _loadUserSportType();
-    final questions = softSkillQuestionCategories
-        .expand(
-          (category) => category.questions.map(
-            (question) => TestQuestionEntry(
-              categoryId: category.id,
-              categoryTitle: category.title,
-              categoryDbSkillName: category.dbSkillName,
-              question: question,
-            ),
-          ),
-        )
-        .toList();
+    final questions = _buildTestQuestionsForSport(sportType);
 
     questions.shuffle(_random);
 
@@ -78,6 +67,31 @@ class _TestPageState extends State<TestPage> {
       answers = List<String?>.filled(questions.length, null);
       isLoading = false;
     });
+  }
+
+  List<TestQuestionEntry> _buildTestQuestionsForSport(String? sportType) {
+    const questionsPerSkill = 3;
+    final selectedQuestions = <TestQuestionEntry>[];
+
+    for (final category in softSkillQuestionCategories) {
+      final sportQuestions = category.questions
+          .where((question) => question.isForSport(sportType))
+          .toList()
+        ..shuffle(_random);
+
+      selectedQuestions.addAll(
+        sportQuestions.take(questionsPerSkill).map(
+          (question) => TestQuestionEntry(
+            categoryId: category.id,
+            categoryTitle: category.title,
+            categoryDbSkillName: category.dbSkillName,
+            question: question,
+          ),
+        ),
+      );
+    }
+
+    return selectedQuestions;
   }
 
   Future<String?> _loadUserSportType() async {
@@ -356,7 +370,7 @@ class _TestPageState extends State<TestPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                option.text,
+                option.getText(userSportType),
                 style: TextStyle(
                   fontSize: 16,
                   color: selected ? Colors.white : Colors.black87,
