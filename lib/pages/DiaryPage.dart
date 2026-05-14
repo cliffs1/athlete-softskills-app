@@ -108,8 +108,7 @@ class _DiaryPageState extends State<DiaryPage> {
 
       try {
         final coachResponse = await AiCoachService.analyzeEntry(
-          diaryText: emotionalText,
-          answers: answers,
+          diaryText: emotionalText
         );
 
         final Map<String, dynamic> data = {

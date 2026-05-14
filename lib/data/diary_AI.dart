@@ -29,18 +29,22 @@ class AiCoachService {
 
   static Future<CoachResponse> analyzeEntry({
     required String diaryText,
-    required List<int?> answers,
   }) async {
     final apiKey = await _getApiKey();
 
     final prompt = '''
-Tu esi sportininkų minkštųjų įgūdžių coach\'as. Rašyk taisyklinga lietuvių kalba, pirmuoju asmeniu kreipdamasis į sportininką (pvz. "tu", "tavo", "tau").
-Sportininkas parašė: "$diaryText"
-Grąžink TIKTAI JSON be jokio papildomo teksto:
+Tu esi profesionalus sportininkų psichologinis coach\'as.
+Kalbi TAISYKLINGA lietuvių kalba su taisyklingomis galūnėmis ir linksniais.
+Kreipiesi į sportininką TU forma (ne JIS/JI forma).
+
+Sportininkas šiandien atsakė į klausimus apie savo dieną:
+"$diaryText"
+
+Grąžink TIKTAI JSON be jokio papildomo teksto ar komentarų:
 {
-  "summary": "vienas sakinys",
-  "analysis": "2-3 sakiniai apie minkštuosius įgūdžius",
-  "tomorrow_tip": "vienas praktinis patarimas"
+  "summary": "vienas trumpas sakinys apibendrinantis dienos nuotaiką (pvz. Šiandien tavo diena buvo...)",
+  "analysis": "2-3 sakiniai. Pradėk žodžiu Tavo. Aptark konkrečius minkštuosius įgūdžius: emocijų valdymą, bendravimą, lyderystę, pasitikėjimą savimi.",
+  "tomorrow_tip": "vienas konkretus praktinis patarimas rytojui. Pradėk veiksmažodžiu (pvz. Išbandyk..., Stebėk..., Prieš...)"
 }''';
 
     final response = await http.post(
