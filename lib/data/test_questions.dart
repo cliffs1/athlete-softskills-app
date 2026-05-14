@@ -14,6 +14,79 @@ class QuestionOption {
     required this.text,
     required this.weight,
   });
+
+  String getText([String? sportType]) {
+    if (sportType == null) return text;
+
+    return text.replaceAllMapped(RegExp(r'\(([^()]*)\)'), (match) {
+      final content = match.group(1)!;
+      if (!_hasSportMarkers(content)) return match.group(0)!;
+
+      final variant = _extractSportVariant(content, sportType);
+      return variant == null ? match.group(0)! : variant;
+    });
+  }
+
+  static bool _hasSportMarkers(String text) {
+    return RegExp(r'\b(K|T|F)\b').hasMatch(text);
+  }
+
+  static String? _extractSportVariant(String text, String sportType) {
+    final targetMarker = _sportMarker(sportType);
+    if (targetMarker == null) return null;
+
+    final prefixVariant = _extractPrefixVariant(text, targetMarker);
+    if (prefixVariant != null) return prefixVariant;
+
+    return _extractSuffixVariant(text, targetMarker);
+  }
+
+  static String? _sportMarker(String sportType) {
+    if (sportType == SportType.krepsinis) return 'K';
+    if (sportType == SportType.tinklinis) return 'T';
+    if (sportType == SportType.futbolas) return 'F';
+    return null;
+  }
+
+  static String? _extractPrefixVariant(String text, String targetMarker) {
+    final parts = text.split(RegExp(r'\s*/\s*|,\s*'));
+
+    for (final part in parts) {
+      final match = RegExp(r'\b([KTF])\b\s*(.+)').firstMatch(part.trim());
+      if (match == null || match.group(1) != targetMarker) continue;
+      return _cleanSportVariant(match.group(2)!);
+    }
+
+    return null;
+  }
+
+  static String? _extractSuffixVariant(String text, String targetMarker) {
+    final parts = text.split(RegExp(r'\s*/\s*|,\s*'));
+
+    for (final part in parts) {
+      final trimmed = part.trim();
+      final markers = RegExp(r'\b([KTF])\b').allMatches(trimmed).toList();
+      if (!markers.any((marker) => marker.group(1) == targetMarker)) continue;
+
+      final withoutMarkers = trimmed
+          .replaceAll(RegExp(r'\b(K|T|F)\b'), '')
+          .replaceAll(RegExp(r'\bit\b|\bir\b', caseSensitive: false), '')
+          .trim();
+      return _cleanSportVariant(withoutMarkers);
+    }
+
+    return null;
+  }
+
+  static String _cleanSportVariant(String value) {
+    return value
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAllMapped(
+          RegExp(r'\s+([,.;:?!])'),
+          (match) => match.group(1)!,
+        )
+        .trim();
+  }
 }
 
 class SoftSkillQuestion {
@@ -39,7 +112,104 @@ class SoftSkillQuestion {
       return sportSpecificQuestions[sportType]!;
     }
 
+    if (sportType != null) {
+      final sportQuestion = _extractSportQuestion(question, sportType);
+      if (sportQuestion != null) {
+        return sportQuestion;
+      }
+    }
+
     return question;
+  }
+
+  static String? _extractSportQuestion(String text, String sportType) {
+    final inlineText = _replaceInlineSportVariants(text, sportType);
+    final labeledText = _extractLabeledSportSegment(inlineText, sportType);
+
+    if (labeledText == null || labeledText.trim().isEmpty) {
+      return inlineText == text ? null : inlineText;
+    }
+
+    return labeledText;
+  }
+
+  static String? _extractLabeledSportSegment(String text, String sportType) {
+    final labelRegex = RegExp(
+      r'(KREPŠINIS IR FUTBOLAS|KREPŠINIS|TINKLINIS|FUTBOLAS)\s*:?\s*',
+      caseSensitive: false,
+    );
+    final matches = labelRegex.allMatches(text).toList();
+
+    if (matches.isEmpty || matches.first.start != 0) {
+      return null;
+    }
+
+    final variants = <String, String>{};
+    for (var index = 0; index < matches.length; index++) {
+      final match = matches[index];
+      final segmentStart = match.end;
+      final segmentEnd = index + 1 < matches.length
+          ? matches[index + 1].start
+          : text.length;
+      final segment = text.substring(segmentStart, segmentEnd).trim();
+      final label = match.group(1)!.toUpperCase();
+
+      if (label.contains('KREPŠINIS')) {
+        variants[SportType.krepsinis] = segment;
+      }
+      if (label.contains('TINKLINIS')) {
+        variants[SportType.tinklinis] = segment;
+      }
+      if (label.contains('FUTBOLAS')) {
+        variants[SportType.futbolas] = segment;
+      }
+    }
+
+    final variant = variants[sportType];
+    if (variant == null) return null;
+
+    if (!variant.endsWith('?') && text.trim().endsWith('Ką darysite?')) {
+      return '$variant Ką darysite?';
+    }
+
+    return variant;
+  }
+
+  static String _replaceInlineSportVariants(String text, String sportType) {
+    final inlineRegex = RegExp(
+      r'\((KREPŠINIS[^()]*TINKLINIS[^()]*FUTBOLAS[^()]*)\)',
+      caseSensitive: false,
+    );
+
+    return text.replaceAllMapped(inlineRegex, (match) {
+      final content = match.group(1)!;
+      final labelRegex = RegExp(
+        r'(KREPŠINIS|TINKLINIS|FUTBOLAS)\s*',
+        caseSensitive: false,
+      );
+      final labels = labelRegex.allMatches(content).toList();
+      final variants = <String, String>{};
+
+      for (var index = 0; index < labels.length; index++) {
+        final label = labels[index].group(1)!.toUpperCase();
+        final segmentStart = labels[index].end;
+        final segmentEnd = index + 1 < labels.length
+            ? labels[index + 1].start
+            : content.length;
+        final segment = content.substring(segmentStart, segmentEnd).trim();
+
+        if (label == 'KREPŠINIS') {
+          variants[SportType.krepsinis] = segment;
+        } else if (label == 'TINKLINIS') {
+          variants[SportType.tinklinis] = segment;
+        } else if (label == 'FUTBOLAS') {
+          variants[SportType.futbolas] = segment;
+        }
+      }
+
+      final variant = variants[sportType];
+      return variant == null ? match.group(0)! : '($variant)';
+    });
   }
 }
 
@@ -3190,6 +3360,232 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
           ),
         ],
       ),
+
+      SoftSkillQuestion(
+        question: 'Po treniruotės prie jūsų prieina komandos draugas, aiškiai sutrikęs, ir pradeda kalbėti apie tai, kad jam pastaruoju metu nesiseka. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Iškart pradėsite duoti patarimus, kaip jam reikia treniruotis ir mąstyti',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Pasakysite, kad jį suprantate, bet greitai pakeisite pokalbio temą',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pasakysite kelis padrąsinimo žodžius ir nukreipsite į trenerį ar psichologą',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Atidžiai išklausysite jį, neminėsite savų panašių patirčių, užduosite kelis klausimus ir tik tada, jei jis paprašys, pasiūlysite savo nuomonę',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Treneris pakeitė taktiką, kuri, jūsų manymu, neveiks prieš šitą varžovą. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tylėsite per rungtynes, tačiau aikštelėje slapta žaisite pagal savo planą',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Per pertrauką garsiai išreikšite nepasitenkinimą priešais visą komandą',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Tylėsite, vykdysite trenerio nurodymus, bet po varžybų tai aptarsite su kitais komandos draugais',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Tinkamu momentu privačiai prieisite prie trenerio, išreikšite savo pastebėjimus ir paklausite jo paaiškinimo',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Pastebite, kad komandos draugas kelis kartus iš eilės blogai atlieka pasą, dėl to komanda praranda taškus. Per pertrauką jis šalia jūsų. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Garsiai priešais visą komandą pasakysite, kad jis sustabdytų šios klaidos darymą',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Tylėsite – tai trenerio darbas reaguoti į tokius dalykus',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Apie tai pajuokausite, kad situacija atrodytų lengvesnė',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Ramiai ir konkrečiai jam paaiškinsite, ką pastebėjote, kaip jis galėtų pasą atlikti kitaip, ir parodysite, kad tikite, jog kitas pasas bus geresnis',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Po pirmojo kėlinio jaučiate, kad esate labai pavargęs ir greitai galite pradėti daryti klaidas. Treneris to nepastebi ir keisti jūsų neplanuoja. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tylėsite ir žaisite toliau, kol nepadarysite didelės klaidos',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Demonstratyviai parodysite nuovargį (sėdėsite, nuleisite galvą), tikėdamiesi, kad treneris pastebės',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pasiskųsite komandos draugams, kad esate pavargęs, tikitės, jog kažkas perduos treneriui',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Aiškiai ir tiesiogiai per artimiausią proga pranešite treneriui apie savo būklę, leisdami jam priimti informuotą sprendimą',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Žaidimo metu pamatote, kad esate atviroje pozicijoje, bet komandos draugas su kamuoliu jūsų nemato. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tylėsite ir lauksite, gal jis pats supras',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Mojuosite rankomis, bet nieko nesakysite',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Garsiai šauksite jo vardą ir komunikuosite, kur esate',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Garsiai šauksite vardu, nurodysite poziciją ir kartu duosite aiškų kūno signalą (atvira ranka, judesys), kad būtumėte ir matomas, ir girdimas',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'TINKLINIS: Kamuolys nukrenta tarp jūsų ir komandos draugo zonų – nei akivaizdžiai jūsų, nei akivaizdžiai jo (siūlė tarp dviejų zonų). Yra rizika, kad arba abu šoksite jo priimti ir susidursite, arba abu pagalvosite, kad ima kitas, ir kamuolys nukris. KREPŠINIS: Po varžovo nesėkmingo metimo kamuolys atšoka nuo lanko į baudos aikštelės vidurį. Jūs ir komandos draugas esate vienodu atstumu nuo kamuolio ir tuo pat metu šokate jo atkovoti. Yra rizika susidurti arba prarasti kamuolį varžovui, jei nesusikalbėsite. FUTBOLAS: Į baudos aikštelę įskrenda aukštas kamuolys po kampinio ar laisvojo smūgio. Jūs ir komandos draugas abu esate pozicijoje jį priimti galva, bet kuris ims – neaišku. Yra rizika susidurti arba kad nei vienas neperims, jei nesusikalbėsite.',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tylėsite ir lauksite, kol komandos draugas pasitrauks arba pats ims kamuolį',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Judesiu ar mostais parodysite ketinimą imti, bet garsiai nieko nepasakysite',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Garsiai šūkčiosite neaiškius garsus, bet konkrečiai nepasakysite, kas ima',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Aiškiai ir garsiai trumpu žodžiu pasakysite "Mano!" / "Aš!" ir vienu metu darysite ryžtingą judesį kamuolio link',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Esate gynyboje ir matote, kaip varžovas iš silpnosios pusės atbėga statyti užtvaros jūsų komandos draugui, ginančiam kamuolį. Jūsų komandos draugas dar nemato šio judesio. Liko 2 sekundės iki kontakto. TINKLINIS: Esate galinės linijos žaidėjas. Matote, kad varžovų kėlėjas duos greitą trumpą pasą per vidurį centro blokuotojai. Jūsų priekinės linijos žaidėjai pasiruošę aukštai atakai per kraštą. Liko sekundė iki kėlėjo prisilietimo prie kamuolio. FUTBOLAS: Esate centrinis gynėjas. Matote, kaip varžovų puolėjas pradeda staigų bėgimą jūsų komandos draugo (kito gynėjo) aklojoje zonoje. Kamuolį turintis varžovas jau pakelia galvą ir ruošiasi pasiųsti perdavimą už nugaros. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tylėsite – jei pamatysite ką nors konkretaus, gal vėliau pasakysite',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Šūkčiosite kažką bendro pobūdžio ("dėmesio!", "atsargiai!")',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Įvardysite grėsmę ("užtvara!" K, "greitas!" T, "už nugaros!" F), bet komandos draugas išgirs per vėlai – likus pusei sekundės iki kontakto',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Bandysite anksti, garsiai ir konkrečiai įvardyti: kas, iš kurios pusės ir ką reikia daryti su pakankamai laiko reaguoti',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Per varžovų puolimą jūs ir komandos draugas susidūrėte gynyboje, nes abu galvojote, kad antras imsis varžovo, kuris perėjo užtvarą. Varžovai pelnė lengvus du taškus. Grįžtate į puolimą. TINKLINIS: Jūs ir libero abu pajudėjote vieno kamuolio link priimti užmetimą, susidūrėte ir kamuolys nukrito. Varžovai laimėjo tašką. Komandos draugas suirzęs. FUTBOLAS: Per kampinį jūs ir kitas gynėjas abu pasekėte vieną varžovą, palikę kitą laisvą. Įvartis. Atsigręžiate vienas į kitą. Ką darysite per artimiausias 30 sekundžių?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Apkaltinsite komandos draugą, kad tai jo kaltė ("kodėl tu nedavei žinoti?")',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Tylėsite ir vidumi pyksite, bet niekas neištaisys situacijos',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pasakysite, kad "viskas gerai, pamirštam", bet nieko konkrečiai nepasiaiškinsite',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Per artimiausią pertrauką trumpai aptarsite konkrečiai: "Aš maniau, kad imi tu / kitą kartą aš imu pirmas, tu dengi" – be kaltinimo, su konkrečiu sprendimu ateičiai',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Treneris ką tik paskelbė pertrauką likus 40 sekundžių iki rungtynių pabaigos. Komanda susėdo, treneris Nubraižė ataką. Pertraukos pabaigoje jūs su komandos draugais grįžtate į aikštelę. TINKLINIS: Ką tik praradote 5 taškus iš eilės. Treneris paėmė pertrauką. Pertraukos pabaigoje grįžtate į aikštelę – varžovai turi serviruoti. FUTBOLAS: Ką tik praleidote įvartį – varžovai pasivijo. Liko 10 minučių iki pabaigos. Stovite aikštelės viduryje, laukdami švilpuko. Komandos draugai žiūri į žemę. Ką darysite tomis paskutinėmis sekundėmis prieš veiksmą?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tylėsite ir žiūrėsite į savo poziciją, nes treneris jau viską pasakė',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Pasikalbėsite tik su artimiausiu komandos draugu, neapimsite visos komandos',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Šauksite bendrines motyvuojančias frazes ("eikim! galim!"), nesukurdami konkrečios komunikacijos',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Pasieksite kelis konkrečius komandos narius akių kontaktu ir trumpu žodžiu, patvirtinsite taktiką, bandysite pakelti komandos energiją',
+            weight: 10,
+          ),
+        ],
+      ),
     ],
   ),
   SoftSkillQuestionCategory(
@@ -3280,7 +3676,233 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
             weight: 7,
           ),
         ],
-      )
+      ),
+
+      SoftSkillQuestion(
+        question: 'Rytoj svarbios varžybos prieš stipresnę nei jūsų komandą. Likus 12 valandų iki jų, ką galvojate ir kaip elgiatės?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Per daug nesistengiate ruoštis – sunku rasti motyvacijos',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Bandote apie varžybas negalvoti, mažiau nervinatės taip',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Įsijaučiate į varžovų vaizdo įrašų analizę, fiksuojate jų stiprybes, dėl to pasidaro dar baisiau',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Sąmoningai peržvelgiate savo pasiruošimą, prisimenate ankstesnius gerus pasirodymus ir mintyse vizualizuojate, kaip sėkmingai sužaisite svarbiausiose situacijose',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Likus 30 sekundžių iki rungtynių pabaigos pertraukos metu treneris paskelbia, kad lemiamą ataką vykdysite jūs. Tai didelė atsakomybė. Kaip jaučiatės ir kaip elgiatės?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Pasijaučiate nepatogiai ir vidumi tikitės, kad žaidimo metu kažkas kitas gaus pasą',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Sutinkate, bet aikštėje suabejojate ir ieškote, kam kitam pasuoti',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Vykdote, nes treneris paskyrė, bet viduje abejojate savo gebėjimu šią situaciją išspręsti',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Priimate užduotį ir vykdote ją įsitikinę savo pajėgumu, nes būtent tokioms situacijoms ruošėtės šimtus kartų',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Komandos draugas pakomentavo, kad treniruočių metu jūs dažnai stovite susikūprinę, su nuleista galva, vengiate akių kontakto. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Nieko nekeisite, svarbu tik rezultatas aikštėje',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Pasijuoksite, kad tokia "jūsų asmenybė"',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Vieną treniruotę sąmoningai stovėsite tiesiai, bet greitai grįšite į senus įpročius',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Sąmoningai treniruosite savo kūno kalbą (galva aukštai, atvira laikysena, ramus žvilgsnis) ir kelias savaites stebėsite, kaip tai veikia jūsų jausmus ir žaidimą aikštėje',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Praėjusią savaitę komanda patyrė skaudų pralaimėjimą, kurio nesitikėjote. Šiandien pirma treniruotė po jo. Kaip elgiatės?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Ateinate nuleidę galvą, sunkiai randate motyvacijos dirbti pilnu pajėgumu',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Ateinate, bet vengiate kalbėti apie pralaimėjimą, tarsi jo nebūtų buvę',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Iš išorės demonstruojate energiją, bet viduje galvojate, kad jūsų komanda greičiausiai nepajėgi pasiekti užsibrėžtų tikslų',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Ateinate ir sąmoningai treniruojatės dar didesniu įsitraukimu',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Rungtynių viduryje pradedate prarasti pasitikėjimą po kelių blogai atliktų veiksmų. Ką vidumi sau sakote?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: '"Aš visada padarau šias klaidas, neišeina pasikeisti "',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: '"Kad tik treneris manęs nepakeistų" – žaidžiate pasyviau, kad nedarytumėt naujų klaidų',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: '"Tiesiog susikoncentruok!" – iš savęs reikalaujate',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Sąmoningai naudojate konkrečią vidinę kalbą: "Kitame epizode – kojos paruoštos, akys į kamuolį" – nukreipdami dėmesį į konkrečius techninius veiksmus',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Atvejis – baudų metimas paskutinėmis sekundėmis. Komandos rezultatas – lygiosios, jums skirtos dvi baudos. Visi tribūnose tyli, varžovai stengiasi jus išmušti iš pusiausvyros komentarais. TINKLINIS: Atvejis – padavimas lemiamame seto taške. Esate prie galinės linijos, rezultatas 24:24, jūsų eilė priimti kamuolį. Treneris pasitiki jumis šiame momente .FUTBOLAS: Atvejis – 11 metrų baudinys per pratęsimą. Lygus rezultatas, viskas priklauso nuo jūsų smūgio. Vartininkas bando jus blaškyti judesiais ant linijos. Kas vyksta jūsų galvoje ir kūne tomis sekundėmis prieš atlikdami veiksmą?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Galvojate apie pasekmes – "ką galvos žmonės, jei nepataikysiu", "tik nepražiopsok"',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Greitai atliekate veiksmą, kad per daug nepergalvoti',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Atliekate kelis veiksmus nusiraminimui, bet jie skirtingi kiekvieną kartą',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Atliekate tą pačią trumpą (5–15 sekundžių) rutiną kaip ir treniruotėse, kad nusiramintumėte ir atliekate tolimesnius veiksmus',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Šiandien jau prametate tris atvirus metimus iš toli ir vieną svarbų baudų metimą. Praėjus dviem minutėms iki pabaigos vėl gaunate kamuolį atviroje pozicijoje, iš kurios paprastai metate. TINKLINIS: Šiandien jau du kartus suklydote servuodami. Rezultatas tampa 22:22, ir vėl ateina jūsų eilė servuoti. FUTBOLAS: Pirmoje kėlinio dalyje jau pražiopsojote dvi progas įmušti įvartį. Atėjo dar viena galimybė – likote vienas prieš vartininką. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Vengiate šios situacijos – (pasuojate kamuolį kitam K , serviruojate "saugiai" T, smūgiuojate be tikėjimo, kad pataikysite F)',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Apie nieką negalvojate, "tiesiog atliekate", bet viduje tikitės blogiausio',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Stengiatės sutelkti dėmesį, bet galvoje šmėkščioja praėjusios klaidos ir baimė jas pakartoti',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Suvokiate, kad praeitos klaidos nepakeitė jūsų gebėjimų – atliekate veiksmą su tokiu pat įsitikinimu kaip ir prieš pirmąją klaidą, sutelkdami dėmesį tik į proceso veiksmus',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Likus 10 sekundžių iki rungtynių pabaigos jūsų komanda turi kamuolį ir pralošia vienu tašku. Treneris dar neturėjo laiko per pertraukėlę nurodyti, kas mes lemiamą metimą. TINKLINIS: Esate priimančiosios pozicijoje. Rezultatas 24:24 trečiojo seto taške. Bus paduodamas padavimas, kuris greičiausiai nukreiptas į jūsų zoną. FUTBOLAS: Komandai paskirtas tiesioginis baudos smūgis 22 metrų atstumu nuo vartų – idealioje pozicijoje smūgiui. Treneris dar nenurodė, kas smūgiuos. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Atsitraukiate ir tikitės, kad kažkas kitas iš komandos prisiims atsakomybę',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Stovite pasyviai – jei kažkas pasiūlys, kad (mestumėte K, priimtumėte T, smūgiuotumėte F) tada darysite',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Norite imtis atsakomybės, bet nedrįstate apie tai garsiai pasakyti',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Aiškiai parodote kūno kalba (rankos pakeltos, žvilgsnis į komandą) ir žodžiu pasakote, kad jūs imatės šios atsakomybės',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Jus paskyrė ginti komandos lyderį – žaidėją, kuris pirmajame kėlinyje per jus jau pelnė 12 taškų. Antrasis kėlinys netrukus prasidės. TINKLINIS: Antrame sete į priekinę liniją prieš jus stoja varžovų geriausias puolėjas. Pirmame sete jis virš jūsų bloko sumušė 4 atakas iš eilės. FUTBOLAS: Antroje rungtynių dalyje jūs ginsite prieš varžovų greitąjį kraštą, kuris pirmoje dalyje jus prabėgo tris kartus iš eilės. Kaip ruošiatės šiai dvikovai ir kas vyksta jūsų galvoje?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Galvojate apie tai, kaip gėdinga vėl prarasti dvikovą, ir žaidžiate atsargiai, traukdamiesi atgal',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Viduje tikitės, kad treneris jus pakeis arba paskirs kitą žaidėją kovoti su šiuo varžovu',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Žaidžiate įprastai, neanalizuojate to, kas atsitiko – tikitės, kad kažkaip "ši dalis bus kitokia"',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Aktyviai analizuojate, kuriais konkrečiais veiksmais jis jus įveikė, koreguojate vieną dalyką savo gynyboje, atvirai stojate į dvikovą su atviru kūnu ir įsitikinimu, kad antroji rungtynių dalis bus jūsų',
+            weight: 10,
+          ),
+        ],
+      ),
     ],
   ),
   SoftSkillQuestionCategory(
@@ -5321,6 +5943,232 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
             )
           ]
       ),
+
+      SoftSkillQuestion(
+        question: 'Treneris paskyrė papildomą neprivalomą jėgos treniruotę šeštadienio rytą. Po įtemptos savaitės jaučiatės pavargęs. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Neisite, savaitgalis skirtas poilsiui, vienos treniruotės praleidimas nieko nekeičia',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Nueisite, bet darysite minimumą, kad treneris pamatytų, jog dalyvaujate',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Nueisite ir prisitaikysite prie kitų – jei jie dirbs ne visu pajėgumu, tai ir jūs',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Nueisite ir atliksite kiekvieną pratimą maksimaliai, nes papildomas darbas padės pasiekti asmeninius tikslus',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Per svarbias varžybas padarėte aiškią klaidą, dėl kurios komanda prarado lemiamą tašką. Ką darysite po varžybų?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Apkaltinsite teisėją, aikštės būklę ar kitas aplinkybes',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Tylėsite ir tikitės, kad niekas nepaminės situacijos',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pripažinsite klaidą tik tada, jei treneris tiesiogiai paklaus',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Patys prieisite prie trenerio, pripažinsite klaidą ir paklausite, kaip kitą kartą jos išvengti',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Iki rytojaus svarbių varžybų liko 12 valandų. Pastebite, kad jūsų sportinė įranga sutvarkyta nepilnai, taip pat reikėtų peržiūrėti varžovų analizę, kurią treneris dalinosi prieš dvi dienas. Yra 21 val. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Paliksite kaip yra – pagrindinis dalykas yra jūsų fizinė forma ir poilsis',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Sutvarkysite tik įrangą, analizės peržiūra užtruks per ilgai',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Greitai paviršutiniškai peržvelgsite abu dalykus',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Skirsite laiko viskam – paruošite įrangą ir atidžiai peržiūrėsite analizę, kad ryt jaustumėtės pasiruošę',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Į komandą atėjo naujas žaidėjas, kuris dar nesusigaudo treniruočių eigoje ir nežino kelių komandos vidinių taisyklių. Treneris užsiėmęs ir negali jam atskirai paaiškinti. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tikitės, kad kažkas kitas iš komandos jam padės',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Stebėsite iš šalies – pats turės išmokti, kaip ir jūs kažkada mokėtės',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Per pertrauką trumpai paklausite, ar jam viskas aišku',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Iš karto paaiškinsite taisykles, parodysite pratimus ir įtrauksite į komandos pokalbius',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Prieš treniruotę gavote nemalonią žinią (mokykloje/darbe/asmeniniame gyvenime), kuri jus emociškai sutrikdė. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Praleisite treniruotę, nes nesate tinkamoje nuotaikoje',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Nueisite į treniruotę, bet sunku valdyti savo emocijas, kartais netyčia išsiliejate ant komandos draugų',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Nueisite į treniruotę, bet tikriausiai bus sunku išlaikyti koncentraciją',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Nueisite, sąmoningai paliksite asmenines problemas už aikštės ribų',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Treneris paliko salę 5 minutėms ir paskyrė atlikti 4 individualaus pratimo. Niekas to nematys ir nestebės. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Padarysite 1–2 serijas, niekas vis tiek nematys',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Apsimesite, kad darote, bet realiai eikvosite mažiau pastangų',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Padarysite visas serijas, bet greičiau ir nekokybiškai',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Padarysite visas 4 serijas tokia pat kokybe kaip ir trenerio akivaizdoje',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Treneris po treniruotės pasiveda jus į šalį ir gana griežtai sukritikuoja dėl klaidos technikoje, kuri kartojasi jau kelias treniruotes. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Pasiteisinsite – paaiškinsite, kodėl tai iš tikrųjų nėra vien jūsų kaltė',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Tylėsite, bet viduje tikriausiai nesutiksite su trenerio nuomone',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pripažinsite žodžiu, kad supratote, bet vėliau treniruotėse pamiršite atlikti pakeitimus',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Pripažinsite klaidą, paklausite konkrečių patarimų, kaip tobulinti, ir kitose treniruotėse sąmoningai dirbsite su tuo',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Šįvakar laukia svarbios varžybos. Po vakarykštės treniruotės jaučiate raumenų skausmą, miegojote tik 6 valandas, o paskutinių dienų mityba buvo netvarkinga. Ką darysite šiandien?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Nieko nekeisite – kūnas susitvarkys pats, svarbiausia – nusiteikimas varžybose',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Po pietų pailsėsite, bet kitiems dalykams (miegas, mityba, hidratacija) didelio dėmesio nespėsite skirti',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pasirūpinsite mityba šiandien, o po varžybų grįšite prie įprastos netvarkingos mitybos, vakare nueisite anksčiau miegoti',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Iš anksto suplanuosite dienos struktūrą – valgymo laikas, vanduo, atsipalaidavimo pratimai, ankstesnis ėjimas miegoti – kad į varžybas atvyktumėte geriausios formos',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Komanda susitarė į treniruotę atvykti 15 minučių anksčiau bendram apšilimui. Šiandien suprantate, kad dėl transporto vėluosite 5–10 minučių. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: '5–10 minučių nieko nekeičia, atvyksite kaip pavyks ir prisijungsite',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Atvyksite vėliau ir tyliai įsiterpsite į grupę, tikėdamiesi, kad niekas nepastebės',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Atvyksite vėliau ir pasiteisinsite transportu ar kitomis aplinkybėmis',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Iškart pranešite treneriui ir kapitonui, kad vėluosite, atvykę greitai apšilsite individualiai, o ateityje paliksite namus anksčiau, kad situacija nepasikartotų',
+            weight: 10,
+          ),
+        ],
+      ),
     ],
   ),
   SoftSkillQuestionCategory(
@@ -5402,7 +6250,233 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
                 weight: 10
             )
           ]
-      )
+      ),
+
+      SoftSkillQuestion(
+        question: 'Pirmoje rungtynių dalyje matote, kad trenerio numatyta taktika neveikia – varžovai jau lengvai skaito jūsų komandos veiksmus. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Vykdysite tą pačią taktiką iki pertraukos, nes treneris ją skyrė ir lauksite jo nurodymų',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Atsisakysite suplanuotos taktikos, žaisite tik pagal savo nuojautą, nesusiderindami su komandos draugais',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Bandysite nors išorinę taktikos formą išlaikyti, bet vidumi pradėsite žaisti pagal save',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Greitai aikštelėje su komandos draugais susitarsite dėl mažo koregavimo, išlaikysite bendrą taktinį rėmą, bet adaptuositės prie to, ką matote',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'TINKLINIS Penkto seto rezultatas 14:15, pralaimite vienu tašku. Pasuojate kamuolį, matote dvi galimybes: (1) tolimas ir nepatogus kėlimas komandos draugui, kuris šiandien daug taškų jau padarė; (2) artimesnis ir patogesnis kėlimas komandos draugui, kuris neseniai pakeltas nuo suoliuko. KREPŠINIS Likus 15 sekundžių iki rungtynių pabaigos jūsų komanda atsilieka vienu tašku. Turite kamuolį ir matote dvi galimybes: (1) atviras tolimas metimas - didelė rizika; (2) saugesnis priartėjimas – mažiau rizikos, bet užtruks ilgiau, varžovai gali spėti sustiprinti gynybą. FUTBOLAS Likus 15 sekundžių iki rungtynių pabaigos jūsų komanda atsilieka vienu įvarčiu. Turite kamuolį ir matote dvi galimybes: (1) atviras tolimas smūgis – didelė rizika; (2) saugesnis priartėjimas – mažiau rizikos, bet užtruks daugiau laiko ir varžovai gali spėti sustiprinti gynybą. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Užmesite akį į trenerį tikėdamiesi, kad jis sušauks, ką pasirinkti',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Pasirinksite saugesnį variantą iš baimės padaryti klaidą',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pasirinksite rizikingesnį variantą iš entuziazmo, neįvertinę, ar tikrai esate tinkamoje pozicijoje',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Greitai įvertinsite savo dabartinę formą, varžovų gynybos padėtį (ir laiką K ir F) – pasirinksite variantą, kuris duoda didžiausią tikimybę pelnyti tašką',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS Prieš dvi atakas priėmėte sprendimą perduoti kamuolį, dėl ko prarasta puolimo galimybė ir komanda pražiopsojo lengvai pelnomus taškus. Dabar vėl atsidūrėte panašioje situacijoje. TINKLINIS Prieš dvi atakas priėmėte sprendimą perduoti lengvą kamuolį į kitą pusę (free ball), dėl ko prarasta puolimo galimybė ir varžovai turi lengva galimybę pelnyti tašką. Dabar vėl atsidūrėte panašioje situacijoje. FUTBOLAS Prieš dvi atakas priėmėte sprendimą perduoti kamuolį, dėl ko prarasta puolimo galimybė ir komanda pražiopsojo lengvai pelnomą įvartį. Dabar vėl atsidūrėte panašioje situacijoje Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Bandysite išvengti panašaus sprendimo, todėl pasirinksite priešingą veiksmą, nors jis yra sudėtingesnis',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Sustingsite, nes per daug analizuosite, kas buvo blogai praeitą kartą',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Priimsite tą patį sprendimą tik dėl to, kad "kartą jau klydau, dabar pavyks"',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Vertinsite situaciją iš naujo, atskirai nuo praeito sprendimo',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'Per pirmąją rungtynių dalį pastebite, kad vienas varžovų žaidėjas turi specifinį polinkį, kurio jūsų komandos draugai dar nepamatė (KREPŠINIS visada pasuka per dešinę pusę  TINKLINIS visada serviruoja į tą pačią zoną FUTBOLAS visada baigia ataką tuo pačiu būdu). Antroje dalyje vėl prieš jus stoja ta situacija. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Žaisite kaip visada, tikitės, kad bus kaip bus',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Pasakysite tik treneriui per pertrauką, daugiau nieko nedarysite',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pasiruošite savyje, bet komandai apie pastebėjimą neperduosite – galbūt sėkmingai vienas perimsite',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Iškart aikštelėje persakysite šį pastebėjimą artimiausiems komandos draugams, kartu prisitaikysite poziciją, kad išnaudotumėte šį modelį',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS IR FUTBOLAS Treneris pertraukos metu jums asmeniškai nurodė konkretų vaidmenį. Žaidimo metu pamatote, kad situacija aikštelėje pasikeitė – jūsų komandos draugas negali apsiginti be jūsų pagalbos, tačiau dėl to turite palikti savo prižiūrimą žmogų. TINKLINIS Treneris pertraukos metu jums asmeniškai nurodė konkretų vaidmenį. Žaidimo metu pamatote, kad situacija aikštelėje pasikeitė – jūsų komandos draugas negali pastatyti gero bloko be jūsų pagalbos, tačiau dėl to turite palikti savo prižiūrimą žmogų. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Vykdysite tiksliai trenerio nurodymą – tai jo darbas matyti visą paveikslą',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Iš karto nukrypsite nuo plano ir pereisite ten, kur, jūsų manymu, reikia',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Sutrikote, kelias sekundes nedarote nieko',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Trumpam laikui nukrypsite nuo plano, kad padėtumėte komandos draugui akivaizdžioje pavojaus zonoje, o per artimiausią pauzę pasitarsite su treneriu ar kapitonu dėl plano koregavimo',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Esate vienu žaidėju daugiau greitojoje atakoje (2v1). Veržiatės su kamuoliu link krepšio, gynėjas stovi tarp jūsų ir komandos draugo, einančio kartu. Atstumas iki krepšio – 5 metrai. TINKLINIS: Esate kėlėjas. Kamuolys atėjo tinkamai, matote, kad varžovų blokas dėl jūsų judesių susikoncentravo prie krašto puolėjo. Vidurio puolėjas atviras trumpam pasui. Turite 0,5 sekundės sprendimui. FUTBOLAS: Atakuojate 2v1 greitoje kontratakoje. Vienintelis gynėjas pasislenka jūsų kryptimi, paliekant komandos draugą šalia laisvą. Esate 18 metrų atstumu nuo vartų. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Visada perduosite kamuolį, nes "komandinis žaidimas geriau"',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Visada bandysite užbaigti pats, nes "kai turi galimybę, imk"',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Sustingsite dvejodami, kol (F it K gynėjas, T blokas) spės atstatyti poziciją',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Per dalį sekundės nuskaitysite gynėjo svorio centro pasislinkimą – jei jis pasidengė prieš jus, perduosite atvirą komandos draugui; jei dengia komandos draugą – pats užbaigsite',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Atliksite pick & roll su komandos draugu. Po užtvaros matote, kad varžovų gynėjas nepasitraukia toli nuo savo žaidėjo, o ne ateina jums į pagalbą. TINKLINIS: Esate kėlėjas. Kamuolys atėjo aukštos kokybės. Matote, kad varžovų vidurio blokuotojas jau pajudėjo link jūsų vidurio smūgiuotojo. Kraštiniai blokuotojai stovi atskirti. FUTBOLAS: Esate atakuojantis vidurio puolėjas su kamuoliu prieš baudos aikštelę. Matote, kad varžovų gynyba pasislinko į vieną pusę, palikdama vienoje pusėje laisvą zoną; jūsų kraštinis puolėjas jau veržiasi į tą zoną. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Eisite į pirmąją automatiškai numatytą veiksmų alternatyvą, neatsižvelgdami į gynybos padėtį',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Ilgai analizuosite, neapsispręsite ir varžovai spės atkurti gynyba',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Pasirinksite saugiausią paprasčiausią variantą, nors gynybos silpnoji vieta yra rizikingesnėje zonoje',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Greitai atpažinsite gynybos disbalansą ir parinksite veiksmą, kuris išnaudoja matomą silpnąją vietą (K atviras tolimas metimas / T greitas kėlimas centro blokuotojui/ F staigus perdavimas į atvirą zoną)',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Ginate savo žaidėją, kuris yra silpnesnėje pusėje toli nuo kamuolio. Matote, kad varžovų įžaidėjas prabėgo jūsų komandos draugą ir veržiasi tiesiai prie krepšio. Jūsų ginamas žaidėjas tuo pat metu pajudėjo už tritaškio linijos. TINKLINIS: Esate galinės  linijos gynėjas savo zonoje. Varžovų kėlėjas pateikė greitą kamuolį centro blokuotojui, tačiau matote, kad blokuotojai jį dengia prastai. FUTBOLAS: Esate vidurio gynėjas. Matote, kad varžovų kraštas prabėgo jūsų komandos draugą kraštiniame gynėjo vaidmenyje ir veržiasi į baudos aikštelę. Jūsų zonoje yra varžovų puolėjas, kurį ginate, jis šiuo metu nejuda. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Liksite priskirtoje pozicijoje, nes toks planas',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Iškart paliksite savo poziciją ir bėgsite gintis kitoje vietoje',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Dvejosite tarp dviejų variantų ir galimai nepriimsite jokio sprendimo laiku',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Įvertinsite greitai: jei jūsų žaidėjas šiuo metu yra mažesnė grėsmė nei tiesioginis pavojus, padėsite komandos draugui, garsiai pranešdami, kad jūsų žaidėjas laisvas',
+            weight: 10,
+          ),
+        ],
+      ),
+      SoftSkillQuestion(
+        question: 'KREPŠINIS: Komanda ką tik išprašė pertraukėlės, turite įmesti kamuolį iš šono. Treneris davė tris galimas alternatyvas: (1) į centro žaidėją, (2) į kraštą užtvarą, (3) į išankstinį tolimą perdavimą. Likus 2 sekundėms iki švilpuko, matote, kad varžovai pasidengė taip, kad pirmoji alternatyva veikia mažiausiai gerai. TINKLINIS: Jūsų eilė serviruoti. Treneris pertraukos metu nurodė kelias galimas zonas. Matote, kad varžovų priėmimo zona pasikeitė lyginant su tuo, kas buvo aptarta – jų geriausias priėmėjas dabar nepriima. FUTBOLAS: Komandai paskirtas tiesioginis baudos smūgis. Numatyta variacija – smūgis tiesiai į vartus. Stebėdami sienelę matote, kad ji per žemai sustojo, o vartininkas paskutiniu metu šiek tiek pasislinko link tolimosios stulpos. Ką darysite?',
+        options: [
+          QuestionOption(
+            id: 'a',
+            text: 'Tiksliai vykdysite numatytą sceną, nes "treneris taip sakė"',
+            weight: 1,
+          ),
+          QuestionOption(
+            id: 'b',
+            text: 'Visiškai improvizuosite, ignoruodami trenerio nurodymus',
+            weight: 3,
+          ),
+          QuestionOption(
+            id: 'c',
+            text: 'Vykdysite numatytą sceną, bet dvejodami – pusiau vienaip, pusiau kitaip',
+            weight: 6,
+          ),
+          QuestionOption(
+            id: 'd',
+            text: 'Iš numatytų alternatyvų pasirinksite tą, kuri labiausiai tinka prie pasikeitusių varžovų rezultatų, ir bandysite kuo aiškiau tai iškomunikuoti savo komandai',
+            weight: 10,
+          ),
+        ],
+      ),
     ],
   ),
 ];
