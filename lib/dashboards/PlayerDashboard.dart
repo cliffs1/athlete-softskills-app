@@ -10,14 +10,22 @@ import '../widgets/CompetitionReflectionReminderWidget.dart';
 import '../widgets/BreathingWidget.dart';
 import '../widgets/InviteReminderWidget.dart';
 import '../widgets/CoachMessageNotificationWidget.dart';
+import '../widgets/PremiumWidget.dart';
 
 
 class PlayerDashboard extends StatelessWidget {
   final String playerId;
   final bool showMotivation;
   final String sport;
+  final String subscriptionType;
 
-  const PlayerDashboard({super.key, required this.playerId, required this.showMotivation, required this.sport});
+  const PlayerDashboard({
+    super.key,
+    required this.playerId,
+    required this.showMotivation,
+    required this.sport,
+    required this.subscriptionType,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +37,10 @@ class PlayerDashboard extends StatelessWidget {
             if (showMotivation) ...[
               const SizedBox(height: 10),
               const MotivationWidget(),
+            ],
+            if (subscriptionType == 'free') ...[
+              const SizedBox(height: 10),
+              const PremiumWidget(),
             ],
             const SizedBox(height: 10),
             const DiaryReminderWidget(),

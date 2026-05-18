@@ -42,12 +42,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
     final data = await supabase
         .from('naudotojas')
-        .select('show_motivation')
+        .select('show_motivation, subscription_type')
         .eq('auth_user_id', user.id)
         .single();
 
     setState(() {
       showMotivation = data['show_motivation'] ?? true;
+      subscriptionEnabled = (data['subscription_type'] == 'premium');
     });
   }
 
@@ -58,6 +59,17 @@ class _SettingsPageState extends State<SettingsPage> {
     await supabase
         .from('naudotojas')
         .update({'show_motivation': value})
+        .eq('auth_user_id', user.id);
+  }
+  Future<void> updateSubscription(bool isPremium) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    await supabase
+        .from('naudotojas')
+        .update({
+      'subscription_type': isPremium ? 'premium' : 'free'
+    })
         .eq('auth_user_id', user.id);
   }
 
@@ -107,7 +119,13 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               value: subscriptionEnabled,
               onChanged: (value) async {
+                setState(() {
+                  subscriptionEnabled = value;
+                });
+
                 await SubscriptionService.instance.setEnabled(value);
+
+                await updateSubscription(value);
               },
             ),
           ],
