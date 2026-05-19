@@ -8,12 +8,14 @@ class Statisticspage extends StatefulWidget {
   final String playerId;
   final bool showAppBar;
   final String? sport;
+  final String? role;
 
   const Statisticspage({
     super.key,
     required this.playerId,
     this.showAppBar = true,
     this.sport,
+    this.role,
   });
 
   @override
@@ -63,11 +65,25 @@ class _StatisticspageState extends State<Statisticspage> {
   bool loading = true;
   String selectedCategory = 'Socialiniai';
   bool hasHistoryData = false;
+  bool get isCoach => widget.role == 'coach';
+  bool get showImportantSkills => !isCoach && widget.sport != null;
 
-  String? get _importantSkill =>
-      widget.sport == null ? null : kImportantSkills[widget.sport]?[selectedCategory];
+  // String? get _importantSkill =>
+  //     widget.sport == null ? null : kImportantSkills[widget.sport]?[selectedCategory];
+  //
+  // bool _isImportant(String skillName) => skillName == _importantSkill;
 
-  bool _isImportant(String skillName) => skillName == _importantSkill;
+  String? get _importantSkill {
+    if (!showImportantSkills) return null;
+
+    final sport = widget.sport;
+    if (sport == null) return null;
+
+    return kImportantSkills[sport]?[selectedCategory];
+  }
+
+  bool _isImportant(String skillName) =>
+      showImportantSkills && skillName == _importantSkill;
 
   @override
   void initState() {
@@ -284,9 +300,13 @@ class _StatisticspageState extends State<Statisticspage> {
       children: [
         if (hasHistoryData) legendItem(Colors.grey, 'Prieš savaitę'),
         legendItem(Colors.blue, 'Dabar'),
+
         if (_importantSkill != null)
-          legendItem(kImportantColor, 'Svarbus įgūdis: $_importantSkill',
-              bold: true),
+          legendItem(
+            kImportantColor,
+            'Svarbus įgūdis: $_importantSkill',
+            bold: true,
+          ),
       ],
     );
   }

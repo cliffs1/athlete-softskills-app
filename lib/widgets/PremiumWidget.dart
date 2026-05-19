@@ -1,7 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PremiumWidget extends StatelessWidget {
-  const PremiumWidget({super.key});
+  const PremiumWidget({super.key, required this.onPremiumActivated,});
+
+  final Future<void> Function() onPremiumActivated;
+
+  Future<void> _activatePremium(BuildContext context) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    try {
+      await supabase
+          .from('naudotojas')
+          .update({'subscription_type': 'premium'})
+          .eq('auth_user_id', user.id);
+
+      await onPremiumActivated();
+
+      if (!context.mounted) return;
+
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Premium sėkmingai aktyvuotas!'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Klaida aktyvuojant premium: $e'),
+        ),
+      );
+    }
+  }
+
+  void _showPremiumDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Premium narystė'),
+        content: const Text(
+          'Ar norite aktyvuoti Premium narystę?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Atšaukti'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            onPressed: () => _activatePremium(context),
+            child: const Text('Gauti Premium'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,9 +107,7 @@ class PremiumWidget extends StatelessWidget {
               backgroundColor: Colors.black,
               foregroundColor: Colors.amber,
             ),
-            onPressed: () {
-              // TODO: Navigate to payment page
-            },
+            onPressed: () => _showPremiumDialog(context),
             child: const Text("Gauti premium"),
           )
         ],

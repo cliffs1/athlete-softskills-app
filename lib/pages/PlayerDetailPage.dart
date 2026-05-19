@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
 import '../widgets/StatisticsWidget.dart';
 import '../pages/StatisticsPage.dart';
+import '../pages/PlayerAnswersPage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PlayerDetailPage extends StatelessWidget {
   final Map<String, dynamic> player;
 
   const PlayerDetailPage({super.key, required this.player});
+
+
+  Future<List<Map<String, dynamic>>> fetchDiary() async {
+    final supabase = Supabase.instance.client;
+
+    final data = await supabase
+        .from('dienorastis')
+        .select('*')
+        .eq('user_id', player['auth_user_id'])
+        .order('entry_date', ascending: false)
+        .limit(7);
+
+    return List<Map<String, dynamic>>.from(data);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +44,7 @@ class PlayerDetailPage extends StatelessWidget {
             tabs: [
               Tab(text: "Apžvalga"),
               Tab(text: "Statistika"),
-              Tab(text: "Kita"),
+              Tab(text: "Atsakymai"),
             ],
           ),
         ),
@@ -37,7 +53,7 @@ class PlayerDetailPage extends StatelessWidget {
           children: [
             _buildOverviewTab(player),
             Statisticspage(playerId: playerId, showAppBar: false),
-            const Center(child: Text("Coming soon")),
+            PlayerAnswersPage(playerId: player['auth_user_id']),
           ],
         ),
       ),

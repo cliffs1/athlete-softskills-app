@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:softskills_app/services/subscription_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -13,27 +12,13 @@ class _SettingsPageState extends State<SettingsPage> {
   final supabase = Supabase.instance.client;
 
   bool showMotivation = true;
-  bool subscriptionEnabled = SubscriptionService.instance.isEnabled;
+  String role = 'player';
+  bool isPremium = false;
 
   @override
   void initState() {
     super.initState();
-    SubscriptionService.instance.addListener(_syncSubscriptionState);
     loadSettings();
-  }
-
-  @override
-  void dispose() {
-    SubscriptionService.instance.removeListener(_syncSubscriptionState);
-    super.dispose();
-  }
-
-  void _syncSubscriptionState() {
-    if (!mounted) return;
-
-    setState(() {
-      subscriptionEnabled = SubscriptionService.instance.isEnabled;
-    });
   }
 
   Future<void> loadSettings() async {
@@ -42,13 +27,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
     final data = await supabase
         .from('naudotojas')
-        .select('show_motivation, subscription_type')
+        .select('show_motivation, role, subscription_type')
         .eq('auth_user_id', user.id)
         .single();
 
     setState(() {
       showMotivation = data['show_motivation'] ?? true;
-      subscriptionEnabled = (data['subscription_type'] == 'premium');
+      role = data['role'] ?? 'player';
+      isPremium = data['subscription_type'] == 'premium';
     });
   }
 
@@ -59,17 +45,6 @@ class _SettingsPageState extends State<SettingsPage> {
     await supabase
         .from('naudotojas')
         .update({'show_motivation': value})
-        .eq('auth_user_id', user.id);
-  }
-  Future<void> updateSubscription(bool isPremium) async {
-    final user = supabase.auth.currentUser;
-    if (user == null) return;
-
-    await supabase
-        .from('naudotojas')
-        .update({
-      'subscription_type': isPremium ? 'premium' : 'free'
-    })
         .eq('auth_user_id', user.id);
   }
 
@@ -112,23 +87,40 @@ class _SettingsPageState extends State<SettingsPage> {
                 await updateMotivation(value);
               },
             ),
-            SwitchListTile(
-              title: const Text('Prenumerata'),
-              subtitle: const Text(
-                'Įjungia premium turinio rodymą programėlėje',
+            if (isPremium) ...[
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                value: role,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: "Rolė",
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'player',
+                    child: Text('Žaidėjas'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'coach',
+                    child: Text('Treneris'),
+                  ),
+                ],
+                onChanged: (value) async {
+                  if (value == null) return;
+
+                  setState(() {
+                    role = value;
+                  });
+
+                  await supabase
+                      .from('naudotojas')
+                      .update({'role': value})
+                      .eq('auth_user_id', supabase.auth.currentUser!.id);
+                },
               ),
-              value: subscriptionEnabled,
-              onChanged: (value) async {
-                setState(() {
-                  subscriptionEnabled = value;
-                });
-
-                await SubscriptionService.instance.setEnabled(value);
-
-                await updateSubscription(value);
-              },
-            ),
+            ]
           ],
+
         ),
       ),
     );

@@ -26,7 +26,6 @@ class _MainPageState extends State<MainPage> {
   bool showMotivation = true;
   String role = 'player';
   String sport = '';
-  String subscriptionType = 'free';
 
   @override
   void initState() {
@@ -55,7 +54,7 @@ class _MainPageState extends State<MainPage> {
 
     final data = await supabase
         .from('naudotojas')
-        .select('show_motivation, role, subscription_type, sporto_saka(pavadinimas)')
+        .select('show_motivation, role, sporto_saka(pavadinimas)')
         .eq('auth_user_id', user.id)
         .single();
 
@@ -63,7 +62,6 @@ class _MainPageState extends State<MainPage> {
       showMotivation = data['show_motivation'] ?? true;
       role = data['role'] ?? 'player';
       sport = data['sporto_saka']?['pavadinimas'] as String? ?? '';
-      subscriptionType = data['subscription_type'] ?? 'free';
     });
   }
   @override
@@ -129,7 +127,9 @@ class _MainPageState extends State<MainPage> {
                   context,
                   MaterialPageRoute(builder: (context) => const SettingsPage()),
                 );
+
                 await loadSettings();
+                setState(() {});
               },
             ),
             ListTile(
@@ -156,8 +156,7 @@ class _MainPageState extends State<MainPage> {
           ? const Center(child: Text("Not logged in"))
           : PlayerDashboard(playerId: user.id,
           showMotivation: showMotivation, 
-          sport: sport,
-          subscriptionType: subscriptionType),
+          sport: sport),
     );
   }
 }
