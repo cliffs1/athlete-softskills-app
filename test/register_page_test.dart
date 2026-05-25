@@ -46,7 +46,6 @@ void main() {
       expect(find.text('El. paštas:'), findsOneWidget);
       expect(find.text('Slaptažodis:'), findsOneWidget);
       expect(find.text('Sporto šaka:'), findsOneWidget);
-      expect(find.text('Rolė:'), findsOneWidget);
     });
 
     testWidgets('renders three text fields', (tester) async {
@@ -57,14 +56,14 @@ void main() {
       expect(find.byType(TextField), findsNWidgets(3));
     });
 
-    testWidgets('renders two dropdowns', (tester) async {
+    testWidgets('renders sport dropdown', (tester) async {
       await setTestScreenSize(tester);
       await tester.pumpWidget(createTestApp());
       await tester.pumpAndSettle();
 
       expect(
         find.byType(DropdownButtonFormField<String>),
-        findsNWidgets(2),
+        findsOneWidget,
       );
     });
 
@@ -93,41 +92,6 @@ void main() {
 
       expect(usernameField.obscureText, isFalse);
       expect(emailField.obscureText, isFalse);
-    });
-
-    testWidgets('role dropdown defaults to Žaidėjas', (tester) async {
-      await setTestScreenSize(tester);
-      await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
-
-      expect(find.text('Žaidėjas'), findsOneWidget);
-    });
-
-    testWidgets('role dropdown contains Treneris option', (tester) async {
-      await setTestScreenSize(tester);
-      await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
-
-      final roleDropdown = find.byType(DropdownButtonFormField<String>).last;
-      await tester.tap(roleDropdown);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Treneris'), findsOneWidget);
-    });
-
-    testWidgets('can select Treneris role', (tester) async {
-      await setTestScreenSize(tester);
-      await tester.pumpWidget(createTestApp());
-      await tester.pumpAndSettle();
-
-      final roleDropdown = find.byType(DropdownButtonFormField<String>).last;
-      await tester.tap(roleDropdown);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Treneris').last);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Treneris'), findsOneWidget);
     });
 
     testWidgets('shows all three sports in dropdown', (tester) async {
