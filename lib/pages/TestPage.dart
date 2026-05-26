@@ -35,6 +35,7 @@ class _TestPageState extends State<TestPage> {
   bool isLoading = true;
   bool isSubmitting = false;
   String? userSportType;
+  bool testUnavailable = false;
 
   int get totalQuestions => _questions.length;
 
@@ -52,6 +53,19 @@ class _TestPageState extends State<TestPage> {
   }
 
   Future<void> loadTestData() async {
+    final canTake = await _canTakeTest();
+
+    if (!canTake) {
+      if (!mounted) return;
+
+      setState(() {
+        testUnavailable = true;
+        isLoading = false;
+      });
+
+      return;
+    }
+
     final sportType = await _loadUserSportType();
     final questions = _buildTestQuestionsForSport(sportType);
 
@@ -67,6 +81,30 @@ class _TestPageState extends State<TestPage> {
       answers = List<String?>.filled(questions.length, null);
       isLoading = false;
     });
+  }
+
+  Future<bool> _canTakeTest() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final oneWeekAgo = DateTime.now().subtract(const Duration(days: 7));
+
+      final response = await supabase
+          .from('test_history')
+          .select('completed_at')
+          .eq('fk_naudotojas', user.id)
+          .gte('completed_at', oneWeekAgo.toIso8601String())
+          .order('completed_at', ascending: false)
+          .limit(1);
+
+      final rows = response as List;
+
+      return rows.isEmpty;
+    } catch (e) {
+      debugPrint('Nepavyko patikrinti testo istorijos: $e');
+      return false;
+    }
   }
 
   List<TestQuestionEntry> _buildTestQuestionsForSport(String? sportType) {
@@ -307,6 +345,11 @@ class _TestPageState extends State<TestPage> {
         });
       }
 
+      await supabase.from('test_history').insert({
+        'fk_naudotojas': user.id,
+        'completed_at': DateTime.now().toIso8601String(),
+      });
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Testo rezultatai išsaugoti')),
@@ -389,6 +432,72 @@ class _TestPageState extends State<TestPage> {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (testUnavailable) {
+      return Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
+          title: const Text('Testas'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.lock_clock,
+                  size: 90,
+                  color: Color.fromRGBO(167, 139, 250, 1),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Testas jau atliktas',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Testą galėsite atlikti dar kartą po savaitės.',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color.fromRGBO(11, 18, 32, 1),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(56, 189, 248, 1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'Grįžti',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
