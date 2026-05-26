@@ -12,6 +12,7 @@ class DiaryPage extends StatefulWidget {
 class _DiaryPageState extends State<DiaryPage> {
   final supabase = Supabase.instance.client;
   bool? completedToday;
+  bool? hasCompletedMainTest;
   final int totalQuestions = 4;
   final List<int?> answers = List<int?>.filled(3, null);
   String emotionalText = "";
@@ -66,15 +67,44 @@ class _DiaryPageState extends State<DiaryPage> {
   Future<void> checkIfCompletedToday() async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
-    final today = DateTime.now().toIso8601String().split('T')[0];
-    final response = await supabase
-        .from('dienorastis')
-        .select()
-        .eq('user_id', user.id)
-        .eq('entry_date', today);
-    setState(() {
-      completedToday = response.isNotEmpty;
-    });
+
+    try {
+      final testHistory = await supabase
+          .from('test_history')
+          .select('completed_at')
+          .eq('fk_naudotojas', user.id)
+          .limit(1);
+
+      final hasCompletedTest = (testHistory as List).isNotEmpty;
+
+      if (!hasCompletedTest) {
+        setState(() {
+          hasCompletedMainTest = false;
+          completedToday = false;
+        });
+        return;
+      }
+
+      final today = DateTime.now().toIso8601String().split('T')[0];
+
+      final diaryResponse = await supabase
+          .from('dienorastis')
+          .select()
+          .eq('user_id', user.id)
+          .eq('entry_date', today);
+
+      setState(() {
+        hasCompletedMainTest = true;
+        completedToday = diaryResponse.isNotEmpty;
+      });
+    } catch (e) {
+      debugPrint('Klaida tikrinant dienoraštį: $e');
+
+      setState(() {
+        hasCompletedMainTest = false;
+        completedToday = false;
+      });
+    }
   }
 
   Future<void> goToNextQuestion() async {
@@ -404,12 +434,21 @@ class _DiaryPageState extends State<DiaryPage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
-          Image.asset('assets/brain_logo_goodremakecolor.png', height: 60),
+          Image.asset(
+            'assets/brain_logo_goodremakecolor.png',
+            height: 60,
+          ),
         ],
       ),
-      body: completedToday == null
-          ? const Center(child: CircularProgressIndicator())
-          : completedToday!
+
+      // LOADING
+      body: hasCompletedMainTest == null || completedToday == null
+          ? const Center(
+        child: CircularProgressIndicator(),
+      )
+
+      // USER HAS NOT COMPLETED MAIN TEST
+          : !hasCompletedMainTest!
           ? Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -417,32 +456,39 @@ class _DiaryPageState extends State<DiaryPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
-                Icons.check_circle,
+                Icons.lock_outline,
                 size: 90,
                 color: Color.fromRGBO(167, 139, 250, 1),
               ),
+
               const SizedBox(height: 24),
+
               const Text(
-                'Dienoraštis jau užpildytas',
+                'Dienoraštis užrakintas',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
+
               const SizedBox(height: 16),
+
               const Text(
-                'Šiandienos dienoraštį jau užpildėte. Sugrįžkite rytoj.',
+                'Pirmiausia turite atlikti pagrindinį testą, kad galėtumėte naudotis dienoraščiu.',
                 style: TextStyle(
                   fontSize: 18,
                   color: Color.fromRGBO(11, 18, 32, 1),
                 ),
                 textAlign: TextAlign.center,
               ),
+
               const SizedBox(height: 32),
+
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromRGBO(56, 189, 248, 1),
+                  backgroundColor:
+                  const Color.fromRGBO(56, 189, 248, 1),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
@@ -467,42 +513,113 @@ class _DiaryPageState extends State<DiaryPage> {
           ),
         ),
       )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: LinearProgressIndicator(value: progress),
-                    ),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: totalQuestions,
-                        onPageChanged: (index) {
-                          setState(() {
-                            currentQuestion = index;
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Card(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: index < answers.length
-                                    ? buildScaleQuestion(index)
-                                    : buildOpenQuestion(index),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+
+      // USER ALREADY COMPLETED TODAY'S DIARY
+          : completedToday!
+          ? Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                size: 90,
+                color: Color.fromRGBO(167, 139, 250, 1),
+              ),
+
+              const SizedBox(height: 24),
+
+              const Text(
+                'Dienoraštis jau užpildytas',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 16),
+
+              const Text(
+                'Šiandienos dienoraštį jau užpildėte. Sugrįžkite rytoj.',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Color.fromRGBO(11, 18, 32, 1),
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 32),
+
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                  const Color.fromRGBO(56, 189, 248, 1),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'Grįžti',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      )
+
+      // SHOW DIARY QUESTIONS
+          : Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: LinearProgressIndicator(value: progress),
+          ),
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              physics:
+              const NeverScrollableScrollPhysics(),
+              itemCount: totalQuestions,
+              onPageChanged: (index) {
+                setState(() {
+                  currentQuestion = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                      BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: index < answers.length
+                          ? buildScaleQuestion(index)
+                          : buildOpenQuestion(index),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
