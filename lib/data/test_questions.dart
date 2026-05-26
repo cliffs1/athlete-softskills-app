@@ -6392,7 +6392,7 @@ const List<SoftSkillQuestionCategory> softSkillQuestionCategories = [
           ),
           QuestionOption(
             id: 'c',
-            text: 'Sustingsite dvejodami, kol (F it K gynėjas, T blokas) spės atstatyti poziciją',
+            text: 'Sustingsite dvejodami, kol (gynėjas F ir K, blokas T) spės atstatyti poziciją',
             weight: 6,
           ),
           QuestionOption(

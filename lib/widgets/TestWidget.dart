@@ -24,3 +24,27 @@ class TestWidget extends StatelessWidget {
     );
   }
 }
+
+class ShortTestWidget extends StatelessWidget {
+  const ShortTestWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TestPage(isShortTest: true),
+            ),
+          );
+        },
+        icon: const Icon(Icons.flash_on),
+        label: const Text("Trumpasis testas"),
+      ),
+    );
+  }
+}

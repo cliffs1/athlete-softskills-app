@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:softskills_app/data/test_questions.dart';
+import 'package:softskills_app/pages/StatisticsPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:math';
 
@@ -18,7 +19,12 @@ class TestQuestionEntry {
 }
 
 class TestPage extends StatefulWidget {
-  const TestPage({super.key});
+  final bool isShortTest;
+
+  const TestPage({
+    super.key,
+    this.isShortTest = false,
+  });
 
   @override
   State<TestPage> createState() => _TestPageState();
@@ -53,7 +59,7 @@ class _TestPageState extends State<TestPage> {
   }
 
   Future<void> loadTestData() async {
-    final canTake = await _canTakeTest();
+    final canTake = widget.isShortTest ? true : await _canTakeTest();
 
     if (!canTake) {
       if (!mounted) return;
@@ -67,7 +73,10 @@ class _TestPageState extends State<TestPage> {
     }
 
     final sportType = await _loadUserSportType();
-    final questions = _buildTestQuestionsForSport(sportType);
+    final questions = _buildTestQuestionsForSport(
+      sportType,
+      questionsPerSkill: widget.isShortTest ? 1 : 3,
+    );
 
     questions.shuffle(_random);
 
@@ -107,8 +116,10 @@ class _TestPageState extends State<TestPage> {
     }
   }
 
-  List<TestQuestionEntry> _buildTestQuestionsForSport(String? sportType) {
-    const questionsPerSkill = 3;
+  List<TestQuestionEntry> _buildTestQuestionsForSport(
+    String? sportType, {
+    required int questionsPerSkill,
+  }) {
     final selectedQuestions = <TestQuestionEntry>[];
 
     for (final category in softSkillQuestionCategories) {
@@ -345,16 +356,29 @@ class _TestPageState extends State<TestPage> {
         });
       }
 
-      await supabase.from('test_history').insert({
-        'fk_naudotojas': user.id,
-        'completed_at': DateTime.now().toIso8601String(),
-      });
+      if (!widget.isShortTest) {
+        await supabase.from('test_history').insert({
+          'fk_naudotojas': user.id,
+          'completed_at': DateTime.now().toIso8601String(),
+        });
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Testo rezultatai išsaugoti')),
+        SnackBar(
+          content: Text(
+            widget.isShortTest
+                ? 'Trumpojo testo rezultatai išsaugoti'
+                : 'Testo rezultatai išsaugoti',
+          ),
+        ),
       );
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Statisticspage(playerId: user.id),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -428,6 +452,8 @@ class _TestPageState extends State<TestPage> {
 
   @override
   Widget build(BuildContext context) {
+    final testTitle = widget.isShortTest ? 'Trumpasis testas' : 'Testas';
+
     if (isLoading) {
       return const Scaffold(
         body: Center(
@@ -440,7 +466,7 @@ class _TestPageState extends State<TestPage> {
         appBar: AppBar(
           centerTitle: true,
           backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
-          title: const Text('Testas'),
+          title: Text(testTitle),
         ),
         body: Center(
           child: Padding(
@@ -507,7 +533,7 @@ class _TestPageState extends State<TestPage> {
         appBar: AppBar(
           centerTitle: true,
           backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
-          title: const Text('Testas'),
+          title: Text(testTitle),
         ),
         body: const Center(
           child: Text('Klausimų kol kas nėra'),
@@ -521,7 +547,7 @@ class _TestPageState extends State<TestPage> {
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
-        title: Text('Klausimas ${currentQuestion + 1} / $totalQuestions'),
+        title: Text('$testTitle ${currentQuestion + 1} / $totalQuestions'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 0.0),

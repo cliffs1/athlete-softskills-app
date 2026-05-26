@@ -1,13 +1,40 @@
 import 'package:flutter/material.dart';
 import '../data/diary_AI.dart';
+import 'MainPage.dart';
 
 class CoachResultPage extends StatelessWidget {
   final CoachResponse response;
-  const CoachResultPage({super.key, required this.response});
+  final bool returnToMain;
+
+  const CoachResultPage({
+    super.key,
+    required this.response,
+    this.returnToMain = false,
+  });
+
+  void _close(BuildContext context) {
+    if (returnToMain) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainPage()),
+        (route) => false,
+      );
+      return;
+    }
+
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !returnToMain,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && returnToMain) {
+          _close(context);
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: const Color.fromRGBO(167, 139, 250, 1),
@@ -91,10 +118,11 @@ class CoachResultPage extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => _close(context),
             child: const Text("Uždaryti", style: TextStyle(fontSize: 16)),
           ),
         ],
+      ),
       ),
     );
   }

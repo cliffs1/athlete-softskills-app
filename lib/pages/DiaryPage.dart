@@ -12,15 +12,18 @@ class DiaryPage extends StatefulWidget {
 class _DiaryPageState extends State<DiaryPage> {
   final supabase = Supabase.instance.client;
   bool? completedToday;
-  final int totalQuestions = 3;
+  final int totalQuestions = 4;
   final List<int?> answers = List<int?>.filled(3, null);
   String emotionalText = "";
   late final PageController _pageController;
+  final TextEditingController _emotionalTextController =
+      TextEditingController();
   int currentQuestion = 0;
   List<String> questions = [
     "Kaip šiandien jautėtės fiziškai ir emociškai?",
     "Ar šiandien bandėte pritaikyti minkštuosius įgūdžius?",
     "Kaip šiandien vertinate savo bendravimą ir atmosferą komandoje?",
+    "Kaip jautiesi, kokios mintys aplankė šiandien tave?",
   ];
   final List<List<String>> answerOptions = [
     [
@@ -56,6 +59,7 @@ class _DiaryPageState extends State<DiaryPage> {
   @override
   void dispose() {
     _pageController.dispose();
+    _emotionalTextController.dispose();
     super.dispose();
   }
 
@@ -108,7 +112,7 @@ class _DiaryPageState extends State<DiaryPage> {
 
       try {
         final coachResponse = await AiCoachService.analyzeEntry(
-          diaryText: emotionalText
+          diaryText: emotionalText,
         );
 
         final Map<String, dynamic> data = {
@@ -135,7 +139,10 @@ class _DiaryPageState extends State<DiaryPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => CoachResultPage(response: coachResponse),
+            builder: (_) => CoachResultPage(
+              response: coachResponse,
+              returnToMain: true,
+            ),
           ),
         );
       } catch (e) {
@@ -158,6 +165,10 @@ class _DiaryPageState extends State<DiaryPage> {
   }
 
   bool canProceed(int index) {
+    if (index == answers.length) {
+      return _emotionalTextController.text.trim().isNotEmpty;
+    }
+
     return answers[index] != null;
   }
 
@@ -168,6 +179,10 @@ class _DiaryPageState extends State<DiaryPage> {
       if (answer == null) continue;
       final optionText = answerOptions[i][answer - 1];
       lines.add('${questions[i]} $optionText');
+    }
+    final openAnswer = _emotionalTextController.text.trim();
+    if (openAnswer.isNotEmpty) {
+      lines.add('${questions.last} $openAnswer');
     }
     return lines.join('\n');
   }
@@ -477,7 +492,9 @@ class _DiaryPageState extends State<DiaryPage> {
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(24),
-                                child: buildScaleQuestion(index),
+                                child: index < answers.length
+                                    ? buildScaleQuestion(index)
+                                    : buildOpenQuestion(index),
                               ),
                             ),
                           );
@@ -532,6 +549,50 @@ class _DiaryPageState extends State<DiaryPage> {
             },
           ),
         ),
+        navigationButtons(index),
+      ],
+    );
+  }
+
+  Widget buildOpenQuestion(int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Klausimas ${index + 1}',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        Text(questions[index], style: const TextStyle(fontSize: 18)),
+        const SizedBox(height: 32),
+        Expanded(
+          child: TextField(
+            controller: _emotionalTextController,
+            maxLines: null,
+            expands: true,
+            textAlignVertical: TextAlignVertical.top,
+            decoration: InputDecoration(
+              hintText: 'Parašyk savo mintis...',
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(
+                  color: Color.fromRGBO(56, 189, 248, 1),
+                  width: 2,
+                ),
+              ),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        const SizedBox(height: 16),
         navigationButtons(index),
       ],
     );
