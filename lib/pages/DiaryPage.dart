@@ -441,13 +441,11 @@ class _DiaryPageState extends State<DiaryPage> {
         ],
       ),
 
-      // LOADING
       body: hasCompletedMainTest == null || completedToday == null
           ? const Center(
         child: CircularProgressIndicator(),
       )
 
-      // USER HAS NOT COMPLETED MAIN TEST
           : !hasCompletedMainTest!
           ? Center(
         child: Padding(
@@ -514,7 +512,6 @@ class _DiaryPageState extends State<DiaryPage> {
         ),
       )
 
-      // USER ALREADY COMPLETED TODAY'S DIARY
           : completedToday!
           ? Center(
         child: Padding(
@@ -581,7 +578,6 @@ class _DiaryPageState extends State<DiaryPage> {
         ),
       )
 
-      // SHOW DIARY QUESTIONS
           : Column(
         children: [
           Padding(

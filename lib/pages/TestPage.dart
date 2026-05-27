@@ -356,12 +356,10 @@ class _TestPageState extends State<TestPage> {
         });
       }
 
-      if (!widget.isShortTest) {
         await supabase.from('test_history').insert({
           'fk_naudotojas': user.id,
           'completed_at': DateTime.now().toIso8601String(),
         });
-      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
