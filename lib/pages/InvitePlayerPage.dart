@@ -47,6 +47,7 @@ class _InvitePlayerPageState extends State<InvitePlayerPage> {
         return;
       }
 
+
       final playerId = userResponse['auth_user_id'];
       final coachId = supabase.auth.currentUser!.id;
 
@@ -64,6 +65,22 @@ class _InvitePlayerPageState extends State<InvitePlayerPage> {
         );
         return;
       }
+
+      final acceptedInvite = await supabase
+          .from('kvietimai')
+          .select()
+          .eq('coach_id', coachId)
+          .eq('player_id', playerId)
+          .eq('status', 'accepted')
+          .maybeSingle();
+
+      if (acceptedInvite != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Jau turite šitą žaidėją komandoje")),
+        );
+        return;
+      }
+
 
       await supabase.from('kvietimai').insert({
         'coach_id': coachId,

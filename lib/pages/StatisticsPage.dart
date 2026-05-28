@@ -67,6 +67,7 @@ class _StatisticspageState extends State<Statisticspage> {
   bool hasHistoryData = false;
   bool get isCoach => widget.role == 'coach';
   bool get showImportantSkills => !isCoach && widget.sport != null;
+  bool get hasNoData => !loading && skills.isEmpty;
 
   // String? get _importantSkill =>
   //     widget.sport == null ? null : kImportantSkills[widget.sport]?[selectedCategory];
@@ -557,6 +558,49 @@ class _StatisticspageState extends State<Statisticspage> {
   }
 
   Widget _buildContent() {
+    if (loading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (hasNoData) {
+      final isCoach = widget.role == "coach";
+
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.bar_chart, size: 60),
+            const SizedBox(height: 16),
+
+            Text(
+              isCoach
+                  ? "Žaidėjas dar neturi statistikos"
+                  : "Dar neturite statistikos",
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                isCoach
+                    ? "Šis žaidėjas dar neatliko minkštųjų įgūdžių testo."
+                    : "Atlikite pagrindinį minkštųjų įgūdžių testą, kad matytumėte analizę.",
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // NORMAL UI BELOW (only if data exists)
     return Column(
       children: [
         Padding(
