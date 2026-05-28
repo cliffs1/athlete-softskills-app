@@ -114,8 +114,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
             const SizedBox(height: 10),
             const TestWidget(),
 
-            const SizedBox(height: 10),
-            const ShortTestWidget(),
+            // const SizedBox(height: 10),
+            // const ShortTestWidget(),
 
             const SizedBox(height: 10),
             const BreathingWidget(),

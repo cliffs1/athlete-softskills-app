@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'ProfilePageEdit.dart';
 import 'ProfilePageEditPassword.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'LoginPage.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -214,22 +215,45 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromRGBO(56, 189, 248, 1),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text(
-                "Ištrinti paskyrą",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Color.fromRGBO(255, 255, 255, 1),
-                ),
-              ),
-            ),
+            // const SizedBox(height: 10),
+            // ElevatedButton(
+            //   style: ElevatedButton.styleFrom(
+            //     backgroundColor: const Color.fromRGBO(56, 189, 248, 1),
+            //   ),
+            //   onPressed: () async {
+            //     final user = supabase.auth.currentUser;
+            //
+            //     if (user == null) return;
+            //
+            //     try {
+            //       await supabase.functions.invoke('delete-user');
+            //
+            //       await supabase.auth.signOut();
+            //
+            //       if (!mounted) return;
+            //
+            //       Navigator.of(context).pushAndRemoveUntil(
+            //         MaterialPageRoute(
+            //           builder: (context) => const LoginPage(),
+            //         ),
+            //             (route) => false,
+            //       );
+            //     } catch (e) {
+            //       ScaffoldMessenger.of(context).showSnackBar(
+            //         SnackBar(
+            //           content: Text("Klaida: $e"),
+            //         ),
+            //       );
+            //     }
+            //   },
+            //   child: const Text(
+            //     "Ištrinti paskyrą",
+            //     style: TextStyle(
+            //       fontSize: 18,
+            //       color: Color.fromRGBO(255, 255, 255, 1),
+            //     ),
+            //   ),
+            // ),
           ],
         ),
       ),
