@@ -389,9 +389,8 @@ class _DiaryPageState extends State<DiaryPage> {
       final previousWeight = currentRow == null
           ? null
           : (currentRow['svoris'] as num?)?.toDouble();
-      final newWeight = (previousWeight == null
-              ? diaryScore
-              : (previousWeight * 0.9) + (diaryScore * 0.1))
+      final diaryBoost = (diaryScore / 10) * 0.1;
+      final newWeight = ((previousWeight ?? 0) + diaryBoost)
           .clamp(0, 10)
           .toDouble();
 

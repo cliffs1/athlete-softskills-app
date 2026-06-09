@@ -3,6 +3,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/article_links.dart';
+import '../data/skill_tips.dart';
+
+class SkillScore {
+  final String name;
+  final String category;
+  final String normalizedName;
+  final double score;
+
+  const SkillScore({
+    required this.name,
+    required this.category,
+    required this.normalizedName,
+    required this.score,
+  });
+}
 
 class TipsPage extends StatefulWidget {
   const TipsPage({super.key});
@@ -14,11 +29,13 @@ class TipsPage extends StatefulWidget {
 class _TipsPageState extends State<TipsPage> {
   final supabase = Supabase.instance.client;
   late final Future<Map<String, dynamic>?> todayDiaryAnalysis;
+  late final Future<List<SkillTip>> recommendedTips;
 
   @override
   void initState() {
     super.initState();
     todayDiaryAnalysis = loadTodayDiaryAnalysis();
+    recommendedTips = loadRecommendedTips();
   }
 
   Future<Map<String, dynamic>?> loadTodayDiaryAnalysis() async {
@@ -42,6 +59,64 @@ class _TipsPageState extends State<TipsPage> {
     }
 
     return Map<String, dynamic>.from(response);
+  }
+
+  Future<List<SkillTip>> loadRecommendedTips() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return generalSkillTips;
+
+    try {
+      final profile = await supabase
+          .from('naudotojas')
+          .select('subscription_type')
+          .eq('auth_user_id', user.id)
+          .maybeSingle();
+      final isPremium = profile?['subscription_type'] == 'premium';
+
+      final response = await supabase
+          .from('naudotojo_minkstieji')
+          .select(
+            'svoris, minkstieji_gebejimai(pavadinimas, kategorija)',
+          )
+          .eq('fk_naudotojas', user.id);
+
+      final skillScores = <SkillScore>[];
+      for (final item in response as List) {
+        final skill = item['minkstieji_gebejimai'];
+        if (skill is! Map) continue;
+
+        final name = skill['pavadinimas']?.toString();
+        final category = skill['kategorija']?.toString();
+        final score = (item['svoris'] as num?)?.toDouble();
+
+        if (name == null || category == null || score == null) continue;
+        if (!isPremium && category != 'Socialiniai') continue;
+
+        final normalizedName = normalizeSkillName(name);
+        if (!skillTipsBySkill.containsKey(normalizedName)) continue;
+
+        skillScores.add(
+          SkillScore(
+            name: name,
+            category: category,
+            normalizedName: normalizedName,
+            score: score,
+          ),
+        );
+      }
+
+      skillScores.sort((a, b) => a.score.compareTo(b.score));
+
+      final tips = skillScores
+          .take(3)
+          .map((skill) => skillTipsBySkill[skill.normalizedName]!.first)
+          .toList();
+
+      return tips.isEmpty ? generalSkillTips : tips;
+    } catch (e) {
+      debugPrint('Nepavyko užkrauti personalizuotų patarimų: $e');
+      return generalSkillTips;
+    }
   }
 
   Widget buildTipCard(String title, String description) {
@@ -164,6 +239,31 @@ class _TipsPageState extends State<TipsPage> {
     );
   }
 
+  Widget buildTipsSection() {
+    return FutureBuilder<List<SkillTip>>(
+      future: recommendedTips,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final tips = snapshot.data ?? generalSkillTips;
+
+        return Column(
+          children: [
+            for (var index = 0; index < tips.length; index++) ...[
+              if (index > 0) const SizedBox(height: 12),
+              buildTipCard(tips[index].title, tips[index].description),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> openArticle(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     final isOpened = await launchUrl(
@@ -263,22 +363,9 @@ class _TipsPageState extends State<TipsPage> {
         child: ListView(
           children: [
             buildTodayAnalysisSection(),
-            buildSectionTitle("Patarimai"),
+            buildSectionTitle("Patarimai pagal tavo rezultatus"),
             const SizedBox(height: 12),
-            buildTipCard(
-              "Bendravimas",
-              "Stenkitės aktyviai klausytis ir priimti kritiką iš komandos narių.",
-            ),
-            const SizedBox(height: 12),
-            buildTipCard(
-              "Susikaupimas",
-              "Rungtynių metu svarbu nepasimesti tarp garso ir trikdžių.",
-            ),
-            const SizedBox(height: 12),
-            buildTipCard(
-              "Pasitikėjimas",
-              "Svarbu neprarasti pasitikėjimo, nors ir nesiseka momente.",
-            ),
+            buildTipsSection(),
             const SizedBox(height: 24),
             buildSectionTitle("Straipsniai"),
             const SizedBox(height: 12),
