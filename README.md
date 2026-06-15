@@ -7,5 +7,5 @@ This app is used to help athletes that participate in team sports to train their
 ## Usage instructions
 1. Download the repository files
 2. Using Android Studio run the program either on an emulator or on a browser
-3. Test the program by firstly doing the main test that evaluates your soft skills and then testing all the functionalities that the program offers
+3. Test the program by firstly doing the main test that evaluates your soft skills and then testing all the functionalities that the program offers \
 It is also possible to generate an .apk file through Android Studio and download that file to android devices.
