@@ -179,7 +179,7 @@ class _CalendarpageState extends State<Calendarpage> with RouteAware {
     return Event(
       id: id,
       date: _dateOnly(day),
-      title: 'Dienorastis uzpildytas',
+      title: 'Dienoraštis užpildytas',
       description: 'dienorastis',
       icon: Container(
         decoration: const BoxDecoration(
